@@ -684,6 +684,13 @@ function checkReminders(){const now=new Date(),date=toISO(now),minutes=now.getHo
 setInterval(checkReminders,30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkReminders();});
 
+/* iOS/PWA: evita el menú nativo de copiar/pegar al mantener pulsado.
+   No cancelamos pointerdown/touchstart para conservar foco, teclado y gestos propios. */
+document.addEventListener('contextmenu', event => event.preventDefault(), {capture:true});
+document.addEventListener('dragstart', event => {
+  if (!event.target.closest('input,textarea,select')) event.preventDefault();
+}, {capture:true});
+
 /* Bloqueo de zoom solicitado: pinch/doble toque/ctrl-wheel y atajos dentro de la página. */
 ['gesturestart','gesturechange','gestureend'].forEach(name=>document.addEventListener(name,event=>event.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',event=>{if(event.touches&&event.touches.length>1)event.preventDefault();},{passive:false});

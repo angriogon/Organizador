@@ -510,3 +510,65 @@ dialog::backdrop { background: rgba(38,45,53,.2); backdrop-filter: blur(2px); -w
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
   .now-mark span { animation: none !important; }
 }
+
+/* iOS / PWA polish · 3.0.1
+   - Bottom sheets realmente centrados y con márgenes simétricos.
+   - Evita el menú contextual nativo al mantener pulsado sin romper los controles táctiles. */
+html, body, button, [role="button"], .swipe-row, .swipe-content, .context-island, .fab, .fab-menu, .sheet, .sheet-body, .now-mode {
+  -webkit-touch-callout: none;
+}
+
+/* La interfaz no necesita seleccionar texto; esto evita selección accidental durante gestos. */
+body, button, .swipe-row, .swipe-content, .context-island, .fab, .fab-menu, .sheet-header, .action-option, .connect-btn, .choice-row {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Los campos siguen admitiendo foco, cursor y escritura. */
+input, select, textarea {
+  -webkit-touch-callout: none;
+}
+
+@media (max-width: 760px) {
+  .sheet {
+    position: fixed;
+    inset: auto 10px max(8px, env(safe-area-inset-bottom, 0px)) 10px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - max(18px, env(safe-area-inset-top, 0px)) - max(8px, env(safe-area-inset-bottom, 0px)));
+    margin: 0;
+    border: 1px solid rgba(255,255,255,.96);
+    border-radius: 28px;
+  }
+
+  .sheet-body {
+    width: 100%;
+    max-width: 100%;
+    max-height: inherit;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    overflow-x: hidden;
+  }
+
+  .sheet-actions {
+    margin-left: -2px;
+    margin-right: -2px;
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+
+  .field,
+  .field input,
+  .field select,
+  .form-grid,
+  .choice-block,
+  .choice-row,
+  .connect-grid,
+  .connect-btn,
+  .toggle-row,
+  .capacity-preview {
+    min-width: 0;
+    max-width: 100%;
+  }
+}

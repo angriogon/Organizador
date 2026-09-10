@@ -1,4 +1,4 @@
-# Organizador personal inteligente · 3.0
+# Organizador personal inteligente · 3.0.1 · 3.0
 
 Versión 3.0 de la web app: más compacta, más táctil y preparada como PWA real para iPhone y Windows, manteniendo la lógica principal en JavaScript local y sin framework.
 
@@ -195,3 +195,11 @@ organizador-personal-inteligente-v3/
     ├── icon-512.png
     └── apple-touch-icon.png
 ```
+
+
+## Corrección 3.0.1 para iOS / PWA
+
+- Bottom sheets centrados con márgenes laterales simétricos y respeto de las safe areas de iPhone.
+- Se elimina el menú contextual nativo de copiar/pegar al mantener pulsado sobre la interfaz.
+- Los campos de formulario conservan foco, teclado y edición normal.
+- Caché PWA incrementada para forzar la actualización de estilos y JavaScript al desplegar esta revisión.

@@ -572,3 +572,122 @@ input, select, textarea {
     max-width: 100%;
   }
 }
+
+
+/* Organizador 3.1 ----------------------------------------------------------
+   Inicio sin scroll en móvil + acciones de eliminación recuperables. */
+.action-option.danger-option { color: #915e5a; }
+.action-option.danger-option svg { color: #b37670; }
+.action-option.danger-option:hover { background: #fbf1f0; }
+.swipe-row.deleting .swipe-content {
+  animation: task-delete-out .165s ease forwards;
+}
+@keyframes task-delete-out {
+  to { opacity: 0; transform: translateX(-18px) scale(.985); }
+}
+
+@media (max-width: 760px) {
+  /* Inicio es una superficie de una sola pantalla: sin scroll vertical. */
+  body.home-route {
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+  body.home-route .app-shell {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    padding-top: max(9px, env(safe-area-inset-top));
+    padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 66px);
+  }
+  body.home-route .main-content {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  body.home-route .topbar {
+    min-height: 43px;
+    flex: 0 0 43px;
+    margin: 0 3px 7px;
+  }
+  body.home-route .topbar h1 { font-size: 20px; }
+  body.home-route .eyebrow { font-size: 7.5px; margin-bottom: 1px; }
+  body.home-route #homeView {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+  body.home-route .home-card {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    padding: clamp(13px, 2.2dvh, 18px) 16px 12px;
+    border-radius: 22px;
+    display: flex;
+    flex-direction: column;
+  }
+  body.home-route .home-greeting { gap: 10px; flex: 0 0 auto; }
+  body.home-route .home-greeting h2 { font-size: clamp(16px, 2.4dvh, 18px); margin-bottom: 2px; }
+  body.home-route .home-greeting p { font-size: 10px; line-height: 1.2; }
+  body.home-route .quiet-icon { width: 31px; height: 31px; border-radius: 10px; }
+  body.home-route .quiet-icon svg { width: 15px; height: 15px; }
+  body.home-route .day-status-row { margin-top: clamp(10px, 1.9dvh, 17px); gap: 10px; }
+  body.home-route .status-ring { width: 31px; height: 31px; }
+  body.home-route .status-emoji { font-size: 16px; }
+  body.home-route .day-status strong { font-size: 23px; }
+  body.home-route .status-label { font-size: 11px; }
+  body.home-route .status-detail { font-size: 9.5px; }
+  body.home-route .load-track { height: 3px; margin-top: 8px; }
+  body.home-route .focus-heading { margin-top: clamp(12px, 2dvh, 18px); }
+  body.home-route .focus-heading .section-kicker { font-size: 8px; margin-bottom: 2px; }
+  body.home-route .focus-heading h3 { font-size: 14px; }
+  body.home-route .focus-list { margin-top: 5px; }
+  body.home-route .focus-row,
+  body.home-route .focus-row .swipe-content { min-height: clamp(43px, 5.8dvh, 49px); }
+  body.home-route .focus-row .swipe-content { padding: 5px 1px; }
+  body.home-route .focus-title { font-size: 12.5px; }
+  body.home-route .focus-duration { font-size: 10.5px; }
+  body.home-route .focus-actions { margin-top: clamp(7px, 1.2dvh, 11px); }
+  body.home-route .start-btn,
+  body.home-route .tired-btn { min-height: 34px; font-size: 10.5px; border-radius: 12px; }
+  body.home-route .smart-recommendation { min-height: 36px; margin-top: 9px; font-size: 10.5px; border-radius: 12px; }
+  body.home-route .miniagenda { margin-top: 9px; padding-top: 8px; }
+  body.home-route .miniagenda-icon { width: 27px; height: 27px; }
+  body.home-route .miniagenda-copy span { font-size: 7.5px; }
+  body.home-route .miniagenda-copy strong { font-size: 10.5px; }
+  body.home-route .gaps-row { margin-top: 7px; }
+  body.home-route .gaps-label,
+  body.home-route .gap-chip { font-size: 9px; }
+  body.home-route .gap-chip { min-height: 28px; padding: 0 9px; }
+  body.home-route .gesture-hint { display: none !important; }
+}
+
+/* En pantallas bajas conservamos lo esencial: estado + Mis 3 + acción. */
+@media (max-width: 760px) and (max-height: 730px) {
+  body.home-route .home-greeting p,
+  body.home-route .miniagenda,
+  body.home-route .gaps-row { display: none; }
+  body.home-route .day-status-row { margin-top: 8px; }
+  body.home-route .focus-heading { margin-top: 9px; }
+  body.home-route .focus-row,
+  body.home-route .focus-row .swipe-content { min-height: 41px; }
+  body.home-route .focus-actions { margin-top: 6px; }
+}
+
+@media (max-width: 760px) and (max-height: 650px) {
+  body.home-route .smart-recommendation { display: none !important; }
+  body.home-route .home-card { padding-top: 10px; }
+  body.home-route .topbar { min-height: 39px; flex-basis: 39px; margin-bottom: 5px; }
+}
+
+@media (max-width: 760px) {
+  /* Los resultados de “Tengo un rato” son una vista expandida voluntaria; ahí sí permitimos desplazamiento. */
+  body.home-route.home-results-open { height: auto; min-height: 100dvh; overflow-y: auto; }
+  body.home-route.home-results-open .app-shell { height: auto; min-height: 100dvh; overflow: visible; }
+  body.home-route.home-results-open .main-content { height: auto; overflow: visible; }
+  body.home-route.home-results-open #homeView { overflow: visible; }
+  body.home-route.home-results-open .home-card { height: auto; overflow: hidden; }
+}

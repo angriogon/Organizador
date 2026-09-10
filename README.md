@@ -1,4 +1,14 @@
-# Organizador personal inteligente · 3.0.1 · 3.0
+# Organizador personal inteligente · 3.1
+
+## Novedades 3.1
+
+- Nuevo icono de aplicación integrado en los tamaños PWA 192×192, 512×512 y Apple Touch Icon.
+- Inicio móvil bloqueado a una sola pantalla y compactado de forma adaptativa; en iPhone no necesita desplazamiento vertical para las funciones esenciales.
+- En pantallas de poca altura se ocultan primero los bloques secundarios (miniagenda y huecos) para conservar carga diaria, Mis 3 y la acción principal.
+- Las tareas se pueden **Eliminar** desde su menú de acciones sin completarlas. La eliminación es inmediata pero ofrece **Deshacer** durante unos segundos, igual que el resto de acciones rápidas.
+- Se conserva el bloqueo del menú contextual de iOS durante pulsaciones largas, el bloqueo de zoom y el centrado de bottom sheets de 3.0.1.
+- Caché PWA renovada a `opi-v3.1-shell-1` para forzar la actualización de los archivos al publicar en GitHub Pages.
+
 
 Versión 3.0 de la web app: más compacta, más táctil y preparada como PWA real para iPhone y Windows, manteniendo la lógica principal en JavaScript local y sin framework.
 

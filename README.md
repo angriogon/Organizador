@@ -1,4 +1,14 @@
-# Organizador personal inteligente · 3.1
+# Organizador personal inteligente · v3.1.1
+
+Revisión de estabilidad para iOS/PWA. Corrige el bloqueo tras pulsaciones largas y versiona físicamente los iconos para que Safari vuelva a leer el Apple Touch Icon.
+
+## Cambios 3.1.1
+- La supresión del click sintético de iOS ahora expira automáticamente; ya no puede quedarse activada indefinidamente.
+- `pointercancel`, `touchcancel`, pérdida de foco y cierre de sheets liberan el estado táctil.
+- Los controles dentro de los menús flotantes permanecen interactivos incluso durante la corta ventana de supresión del click sintético.
+- Nuevo `apple-touch-icon-v311.png` de 180x180 y nuevos iconos PWA versionados para evitar la caché agresiva de iOS.
+- Service Worker actualizado a una nueva caché `v3.1.1`.
+
 
 ## Novedades 3.1
 

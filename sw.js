@@ -1,4 +1,4 @@
-const CACHE_NAME = 'opi-v3.1-shell-1';
+const CACHE_NAME = 'opi-v3.1.1-shell-1';
 const APP_SHELL = [
   './',
   './index.html',
@@ -6,9 +6,9 @@ const APP_SHELL = [
   './app.js',
   './config.js',
   './manifest.webmanifest',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/apple-touch-icon.png'
+  './icons/icon-192-v311.png',
+  './icons/icon-512-v311.png',
+  './icons/apple-touch-icon-v311.png'
 ];
 
 self.addEventListener('install', event => {

@@ -5,7 +5,7 @@ const LEGACY_STORAGE_KEY = 'opi_tasks_v1';
 const SETTINGS_KEY = 'opi_settings_v2';
 const EXTERNAL_EVENTS_KEY = 'opi_external_events_v2';
 const UI_KEY = 'opi_ui_v3';
-const CACHE_VERSION = '3.0';
+const CACHE_VERSION = '3.1.1';
 
 const DEFAULT_SETTINGS = { name: 'Angel', dailyCapacity: 450, haptics: true };
 const DEFAULT_UI = { focus: { date: '', ids: [] }, gestureUses: 0, celebratedDate: '', reminderNotified: {} };
@@ -31,7 +31,7 @@ const state = {
   undo: null,
   installPrompt: null,
   pendingSpaceSuggestions: [],
-  suppressNextClick: false,
+  suppressClickUntil: 0,
   fabLongPressed: false
 };
 
@@ -462,8 +462,8 @@ function setupRenderedState() {
   if(state.route==='home'&&!reduceMotion()) document.querySelectorAll('.focus-row').forEach(row=>row.classList.add('focus-enter'));
 }
 
-function openSheet(el) { if(!el.open) el.showModal(); }
-function closeSheet(el) { if(el?.open) el.close(); }
+function openSheet(el) { suppressClicksFor(180); if(!el.open) el.showModal(); }
+function closeSheet(el) { if(el?.open) el.close(); releaseSuppressedClicks(); }
 function closeActionSheet(){ closeSheet(els.actionSheet); }
 function resetTaskForm() {
   els.taskForm.reset();els.taskEditId.value='';els.taskScheduledDate.value=todayISO();els.taskCategory.value=['work','personal','study'].includes(state.route)?state.route:'work';els.taskDuration.value='30';els.taskScheduledTime.value='';els.taskDeadline.value='';els.taskRecurrence.value='none';setChoice('priority','medium');setChoice('energy','normal');updateCapacityPreview();
@@ -592,6 +592,20 @@ function getICSValue(block,key){const line=block.split(/\r?\n/).find(l=>l.starts
 function toast(message){els.toast.textContent=message;els.toast.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>els.toast.classList.remove('show'),2100);}
 function escapeHTML(value){return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));}
 
+/* Supresión táctil segura para iOS: nunca queda bloqueada de forma permanente.
+   Se usa solo para ignorar el click sintético que Safari puede emitir tras swipe/long-press. */
+function suppressClicksFor(ms = 260) { state.suppressClickUntil = Math.max(state.suppressClickUntil || 0, performance.now() + ms); }
+function clicksAreSuppressed() { return performance.now() < (state.suppressClickUntil || 0); }
+function releaseSuppressedClicks() { state.suppressClickUntil = 0; }
+function cancelActiveGesture() {
+  if (!gesture) { releaseSuppressedClicks(); return; }
+  clearTimeout(gesture.timer);
+  gesture.row?.classList.remove('swiping','show-complete','show-snooze');
+  gesture.row?.querySelector('.swipe-content')?.style.removeProperty('transform');
+  gesture = null;
+  releaseSuppressedClicks();
+}
+
 /* Gestos: pequeño deslizamiento revela, deslizamiento largo ejecuta; mantener abre acciones. */
 let gesture=null;
 function resetRevealed(except=null){document.querySelectorAll('.swipe-row.reveal-complete,.swipe-row.reveal-snooze').forEach(row=>{if(row!==except){row.classList.remove('reveal-complete','reveal-snooze');row.querySelector('.swipe-content')?.style.removeProperty('transform');}});}
@@ -599,7 +613,7 @@ document.addEventListener('pointerdown',event=>{
   const row=event.target.closest('.swipe-row');
   if(!row||row.classList.contains('is-done')||event.target.closest('button,input,select')){if(!row)resetRevealed();return;}
   resetRevealed(row);const id=row.dataset.taskId,startX=event.clientX,startY=event.clientY;
-  gesture={row,id,startX,startY,dx:0,dy:0,moved:false,long:false,timer:setTimeout(()=>{if(!gesture||gesture.moved)return;gesture.long=true;state.suppressNextClick=true;buzz(7);openTaskActions(id);},480)};
+  gesture={row,id,startX,startY,dx:0,dy:0,moved:false,long:false,timer:setTimeout(()=>{if(!gesture||gesture.moved)return;gesture.long=true;suppressClicksFor(320);buzz(7);openTaskActions(id);},480)};
   row.classList.add('swiping');
 });
 document.addEventListener('pointermove',event=>{
@@ -609,12 +623,18 @@ document.addEventListener('pointermove',event=>{
 });
 document.addEventListener('pointerup',()=>{
   if(!gesture)return;clearTimeout(gesture.timer);const {row,id,dx,dy,long}=gesture;row.classList.remove('swiping','show-complete','show-snooze');const content=row.querySelector('.swipe-content');
-  if(long){content?.style.removeProperty('transform');gesture=null;setTimeout(()=>{state.suppressNextClick=false;},120);return;}
-  if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>=42){recordGestureUse();state.suppressNextClick=true;if(dx>=110){content?.style.removeProperty('transform');completeTask(id);}else if(dx<=-110){content?.style.removeProperty('transform');openSnooze(id);}else if(dx>0){content?.style.removeProperty('transform');row.classList.add('reveal-complete');}else{content?.style.removeProperty('transform');row.classList.add('reveal-snooze');}}
+  if(long){content?.style.removeProperty('transform');gesture=null;suppressClicksFor(220);return;}
+  if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>=42){recordGestureUse();suppressClicksFor(220);if(dx>=110){content?.style.removeProperty('transform');completeTask(id);}else if(dx<=-110){content?.style.removeProperty('transform');openSnooze(id);}else if(dx>0){content?.style.removeProperty('transform');row.classList.add('reveal-complete');}else{content?.style.removeProperty('transform');row.classList.add('reveal-snooze');}}
   else content?.style.removeProperty('transform');
-  gesture=null;setTimeout(()=>{state.suppressNextClick=false;},120);
+  gesture=null;suppressClicksFor(180);
 });
-document.addEventListener('pointercancel',()=>{if(!gesture)return;clearTimeout(gesture.timer);gesture.row.classList.remove('swiping','show-complete','show-snooze');gesture.row.querySelector('.swipe-content')?.style.removeProperty('transform');gesture=null;});
+document.addEventListener('pointercancel',()=>{if(gesture){clearTimeout(gesture.timer);gesture.row.classList.remove('swiping','show-complete','show-snooze');gesture.row.querySelector('.swipe-content')?.style.removeProperty('transform');gesture=null;}suppressClicksFor(180);},{capture:true});
+/* Safari puede cancelar una secuencia táctil al cambiar foco o abrir un dialog.
+   Estas salidas de emergencia garantizan que nunca quede un estado táctil huérfano. */
+window.addEventListener('blur', releaseSuppressedClicks);
+document.addEventListener('visibilitychange', () => { if (document.hidden) releaseSuppressedClicks(); });
+document.addEventListener('touchcancel', () => suppressClicksFor(180), {capture:true, passive:true});
+
 
 /* FAB: toque = tarea; pulsación larga = tres accesos rápidos. */
 let fabTimer=null;
@@ -624,7 +644,7 @@ els.fab.addEventListener('pointercancel',()=>{clearTimeout(fabTimer);els.fab.cla
 
 /* Eventos de interfaz delegados. */
 document.addEventListener('click',event=>{
-  if(state.suppressNextClick){event.preventDefault();return;}
+  if(clicksAreSuppressed()){event.preventDefault();event.stopPropagation();return;}
   const routeBtn=event.target.closest('[data-route]');if(routeBtn){state.route=routeBtn.dataset.route;state.lowEnergyMode=false;closeSmartResults();resetRevealed();render();return;}
   const close=event.target.closest('[data-close-sheet]');if(close){closeSheet(document.getElementById(close.dataset.closeSheet));return;}
   if(event.target.closest('[data-close-action]')){closeActionSheet();return;}

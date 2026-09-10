@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f7f8fb" />
+  <title>Organizador personal inteligente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="floating-menu" aria-label="Categorías">
+      <button class="menu-bubble active" data-category="all" aria-label="Ver todo" title="Todo">✦</button>
+      <button class="menu-bubble personal" data-category="personal" aria-label="Tareas personales" title="Personal">♡</button>
+      <button class="menu-bubble work" data-category="work" aria-label="Tareas laborales" title="Trabajo">⌁</button>
+      <button class="menu-bubble study" data-category="study" aria-label="Tareas de estudios" title="Estudios">⌂</button>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="currentDate"></p>
+          <h1>Tu día, con espacio para respirar.</h1>
+          <p class="subtitle">Solo lo importante, sin llenar la agenda más de la cuenta.</p>
+        </div>
+        <button class="primary-btn" id="openTaskModal">＋ Nueva tarea</button>
+      </header>
+
+      <section class="overview-grid" aria-label="Resumen del día">
+        <article class="summary-card load-card">
+          <div class="summary-heading">
+            <div>
+              <span class="section-kicker">Carga de hoy</span>
+              <strong id="loadLabel">Ligera</strong>
+            </div>
+            <span class="load-percent" id="loadPercent">0%</span>
+          </div>
+          <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="loadBar"></div></div>
+          <p id="loadHint">Tienes margen para añadir algo más.</p>
+        </article>
+
+        <article class="summary-card stat-card">
+          <span class="section-kicker">Pendientes hoy</span>
+          <strong class="big-stat" id="todayCount">0</strong>
+          <p>tareas que merecen tu atención</p>
+        </article>
+
+        <article class="summary-card stat-card">
+          <span class="section-kicker">Próxima fecha límite</span>
+          <strong class="deadline-stat" id="nextDeadline">Sin fechas</strong>
+          <p id="nextDeadlineTitle">Nada urgente por ahora</p>
+        </article>
+      </section>
+
+      <section class="content-card">
+        <div class="section-header">
+          <div>
+            <span class="section-kicker">Vista principal</span>
+            <h2 id="viewTitle">Hoy</h2>
+          </div>
+          <div class="segmented" role="group" aria-label="Vista de tareas">
+            <button class="segment active" data-view="today">Hoy</button>
+            <button class="segment" data-view="upcoming">Próximas</button>
+            <button class="segment" data-view="all">Todas</button>
+          </div>
+        </div>
+
+        <div class="focus-note" id="focusNote">
+          <span>◎</span>
+          <p>Esta vista prioriza tareas vencidas, de alta prioridad y con fecha para hoy.</p>
+        </div>
+
+        <div id="taskList" class="task-list"></div>
+        <div id="emptyState" class="empty-state" hidden>
+          <div class="empty-icon">✓</div>
+          <h3>Todo despejado</h3>
+          <p>No hay tareas en esta vista. Disfruta del hueco o añade algo importante.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="taskModal" class="task-modal">
+    <form method="dialog" id="taskForm">
+      <div class="modal-header">
+        <div>
+          <span class="section-kicker">Nueva tarea</span>
+          <h2>Añadir algo importante</h2>
+        </div>
+        <button type="button" class="icon-btn" id="closeTaskModal" aria-label="Cerrar">×</button>
+      </div>
+
+      <label>
+        <span>Tarea</span>
+        <input id="taskTitle" name="title" type="text" placeholder="Ej. Preparar informe semanal" required maxlength="120" />
+      </label>
+
+      <div class="form-grid">
+        <label>
+          <span>Área</span>
+          <select id="taskCategory" name="category">
+            <option value="personal">Personal</option>
+            <option value="work">Trabajo</option>
+            <option value="study">Estudios</option>
+          </select>
+        </label>
+        <label>
+          <span>Prioridad</span>
+          <select id="taskPriority" name="priority">
+            <option value="low">Baja</option>
+            <option value="medium" selected>Media</option>
+            <option value="high">Alta</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          <span>Fecha límite</span>
+          <input id="taskDueDate" name="dueDate" type="date" />
+        </label>
+        <label>
+          <span>Carga estimada</span>
+          <select id="taskEffort" name="effort">
+            <option value="1">Ligera · 1 punto</option>
+            <option value="2" selected>Media · 2 puntos</option>
+            <option value="3">Alta · 3 puntos</option>
+          </select>
+        </label>
+      </div>
+
+      <label>
+        <span>Recordatorio recurrente</span>
+        <select id="taskRecurrence" name="recurrence">
+          <option value="none">No repetir</option>
+          <option value="daily">Cada día</option>
+          <option value="weekly">Cada semana</option>
+          <option value="monthly">Cada mes</option>
+        </select>
+      </label>
+
+      <div class="modal-actions">
+        <button type="button" class="secondary-btn" id="cancelTask">Cancelar</button>
+        <button type="submit" class="primary-btn">Guardar tarea</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

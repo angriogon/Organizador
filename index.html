@@ -3,107 +3,204 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f7f8fb" />
+  <meta name="theme-color" content="#f7f8fa" />
+  <meta name="description" content="Organizador personal inteligente: tareas, carga diaria y calendario sin ruido." />
   <title>Organizador personal inteligente</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app-shell">
-    <aside class="floating-menu" aria-label="Categorías">
-      <button class="menu-bubble active" data-category="all" aria-label="Ver todo" title="Todo">✦</button>
-      <button class="menu-bubble personal" data-category="personal" aria-label="Tareas personales" title="Personal">♡</button>
-      <button class="menu-bubble work" data-category="work" aria-label="Tareas laborales" title="Trabajo">⌁</button>
-      <button class="menu-bubble study" data-category="study" aria-label="Tareas de estudios" title="Estudios">⌂</button>
+    <aside class="sidebar" aria-label="Navegación principal">
+      <div class="brand" aria-label="Organizador personal inteligente">o</div>
+      <nav class="nav-list">
+        <button class="nav-item active" data-route="home" title="Inicio">
+          <span class="nav-icon">⌂</span><span class="nav-label">Inicio</span>
+        </button>
+        <button class="nav-item" data-route="work" title="Trabajo">
+          <span class="nav-icon">▣</span><span class="nav-label">Trabajo</span>
+        </button>
+        <button class="nav-item" data-route="personal" title="Vida personal y vivienda">
+          <span class="nav-icon">♡</span><span class="nav-label">Vida personal</span>
+        </button>
+        <button class="nav-item" data-route="study" title="Estudios">
+          <span class="nav-icon">◇</span><span class="nav-label">Estudios</span>
+        </button>
+      </nav>
+      <button class="nav-item nav-settings" id="openSettings" title="Ajustes y calendarios">
+        <span class="nav-icon">⚙</span><span class="nav-label">Ajustes</span>
+      </button>
     </aside>
 
     <main class="main-content">
       <header class="topbar">
         <div>
           <p class="eyebrow" id="currentDate"></p>
-          <h1>Tu día, con espacio para respirar.</h1>
-          <p class="subtitle">Solo lo importante, sin llenar la agenda más de la cuenta.</p>
+          <h1 id="pageTitle">Inicio</h1>
         </div>
-        <button class="primary-btn" id="openTaskModal">＋ Nueva tarea</button>
+        <div class="top-actions">
+          <button class="icon-btn" id="openCalendar" aria-label="Abrir calendario" title="Calendario">▦</button>
+          <button class="icon-btn" id="openSettingsTop" aria-label="Abrir ajustes" title="Ajustes">⚙</button>
+          <button class="primary-btn" id="openTaskModal">＋ <span>Nueva tarea</span></button>
+        </div>
       </header>
 
-      <section class="overview-grid" aria-label="Resumen del día">
-        <article class="summary-card load-card">
-          <div class="summary-heading">
+      <section class="view active" id="homeView" aria-label="Inicio">
+        <section class="welcome-card">
+          <div class="greeting-row">
             <div>
-              <span class="section-kicker">Carga de hoy</span>
-              <strong id="loadLabel">Ligera</strong>
+              <h2 id="greeting">Buenas tardes, Angel 👋</h2>
+              <p class="microcopy" id="daySentence">Hoy, solo lo que importa.</p>
             </div>
-            <span class="load-percent" id="loadPercent">0%</span>
+            <button class="ghost-btn compact" id="closeDayBtn">Cerrar día</button>
           </div>
-          <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="loadBar"></div></div>
-          <p id="loadHint">Tienes margen para añadir algo más.</p>
-        </article>
 
-        <article class="summary-card stat-card">
-          <span class="section-kicker">Pendientes hoy</span>
-          <strong class="big-stat" id="todayCount">0</strong>
-          <p>tareas que merecen tu atención</p>
-        </article>
+          <div class="home-grid">
+            <article class="capacity-panel">
+              <div class="capacity-ring" id="capacityRing" aria-label="Carga diaria">
+                <div class="ring-inner">
+                  <span class="load-emoji" id="loadEmoji">🙂</span>
+                  <strong id="loadPercent">0%</strong>
+                </div>
+              </div>
+              <div class="capacity-copy">
+                <span class="section-kicker">Carga de hoy</span>
+                <h3 id="loadStatus">Equilibrado</h3>
+                <p id="capacityContext">0 min planificados</p>
+                <button class="mini-link" id="makeSpaceBtn" hidden>Hazme hueco →</button>
+              </div>
+            </article>
 
-        <article class="summary-card stat-card">
-          <span class="section-kicker">Próxima fecha límite</span>
-          <strong class="deadline-stat" id="nextDeadline">Sin fechas</strong>
-          <p id="nextDeadlineTitle">Nada urgente por ahora</p>
-        </article>
+            <article class="top-three-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="section-kicker">Mis 3 de hoy</span>
+                  <h3>Lo que no se puede perder</h3>
+                </div>
+                <span class="count-badge" id="topThreeCount">0</span>
+              </div>
+              <div class="top-three-list" id="topThreeList"></div>
+            </article>
+          </div>
+
+          <div class="alert-strip" id="importantAlert" hidden></div>
+
+          <div class="quick-row">
+            <span class="quick-label">Tengo un rato</span>
+            <button class="time-chip" data-minutes="15">15 min</button>
+            <button class="time-chip" data-minutes="30">30 min</button>
+            <button class="time-chip" data-minutes="60">1 h</button>
+            <span class="quick-divider"></span>
+            <button class="time-chip energy-chip" id="lowEnergyBtn">😴 Estoy cansada</button>
+          </div>
+        </section>
+
+        <section class="smart-results" id="smartResults" hidden>
+          <div class="section-header compact-header">
+            <div>
+              <span class="section-kicker">Ahora mismo</span>
+              <h2 id="smartResultsTitle">Puedes avanzar con esto</h2>
+            </div>
+            <button class="icon-btn subtle" id="closeSmartResults" aria-label="Cerrar sugerencias">×</button>
+          </div>
+          <div id="smartTaskList" class="task-list"></div>
+        </section>
+
+        <section class="home-bottom-grid">
+          <article class="mini-card">
+            <span class="section-kicker">Próximo</span>
+            <strong id="nextTaskTitle">Nada urgente</strong>
+            <span id="nextTaskMeta">Tu agenda está tranquila</span>
+          </article>
+          <article class="mini-card clickable" id="calendarContextCard" role="button" tabindex="0">
+            <span class="section-kicker">Calendario</span>
+            <strong id="calendarBusy">Sin eventos conectados</strong>
+            <span id="calendarCapacity">Puedes conectar tu agenda</span>
+          </article>
+        </section>
       </section>
 
-      <section class="content-card">
-        <div class="section-header">
-          <div>
-            <span class="section-kicker">Vista principal</span>
-            <h2 id="viewTitle">Hoy</h2>
+      <section class="view" id="tasksView" aria-label="Tareas por categoría">
+        <section class="content-card">
+          <div class="section-header">
+            <div>
+              <span class="section-kicker" id="categoryKicker">Área</span>
+              <h2 id="categoryTitle">Trabajo</h2>
+            </div>
+            <div class="segmented" role="group" aria-label="Filtro de tareas">
+              <button class="segment active" data-task-filter="open">Pendientes</button>
+              <button class="segment" data-task-filter="today">Hoy</button>
+              <button class="segment" data-task-filter="all">Todas</button>
+            </div>
           </div>
-          <div class="segmented" role="group" aria-label="Vista de tareas">
-            <button class="segment active" data-view="today">Hoy</button>
-            <button class="segment" data-view="upcoming">Próximas</button>
-            <button class="segment" data-view="all">Todas</button>
+          <div id="categoryTaskList" class="task-list"></div>
+          <div id="categoryEmpty" class="empty-state" hidden>
+            <div class="empty-icon">✓</div>
+            <h3>Todo despejado</h3>
+            <p>No hay tareas aquí ahora mismo.</p>
           </div>
-        </div>
+        </section>
+      </section>
 
-        <div class="focus-note" id="focusNote">
-          <span>◎</span>
-          <p>Esta vista prioriza tareas vencidas, de alta prioridad y con fecha para hoy.</p>
-        </div>
-
-        <div id="taskList" class="task-list"></div>
-        <div id="emptyState" class="empty-state" hidden>
-          <div class="empty-icon">✓</div>
-          <h3>Todo despejado</h3>
-          <p>No hay tareas en esta vista. Disfruta del hueco o añade algo importante.</p>
-        </div>
+      <section class="view" id="calendarView" aria-label="Calendario">
+        <section class="content-card calendar-card">
+          <div class="calendar-toolbar">
+            <div>
+              <span class="section-kicker">Agenda</span>
+              <h2 id="calendarMonthTitle">Calendario</h2>
+            </div>
+            <div class="calendar-actions">
+              <button class="icon-btn subtle" id="calendarPrev" aria-label="Mes anterior">←</button>
+              <button class="ghost-btn compact" id="calendarToday">Hoy</button>
+              <button class="icon-btn subtle" id="calendarNext" aria-label="Mes siguiente">→</button>
+            </div>
+          </div>
+          <div class="calendar-legend" aria-label="Leyenda">
+            <span><i class="dot work"></i>Trabajo</span>
+            <span><i class="dot personal"></i>Vida personal</span>
+            <span><i class="dot study"></i>Estudios</span>
+            <span><i class="dot external"></i>Calendario</span>
+          </div>
+          <div class="calendar-weekdays" aria-hidden="true">
+            <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </section>
       </section>
     </main>
   </div>
 
-  <dialog id="taskModal" class="task-modal">
+  <dialog id="taskModal" class="modal task-modal">
     <form method="dialog" id="taskForm">
       <div class="modal-header">
         <div>
           <span class="section-kicker">Nueva tarea</span>
-          <h2>Añadir algo importante</h2>
+          <h2>Añadir sin perder tiempo</h2>
         </div>
-        <button type="button" class="icon-btn" id="closeTaskModal" aria-label="Cerrar">×</button>
+        <button type="button" class="icon-btn subtle" data-close-dialog="taskModal" aria-label="Cerrar">×</button>
       </div>
+
+      <label class="quick-input-label">
+        <span>Entrada rápida</span>
+        <input id="quickTaskInput" type="text" placeholder="Ej. Llamar a Laura mañana 18:00 personal alta 20m" autocomplete="off" />
+        <small>Reconoce fecha, hora, área, prioridad y duración.</small>
+      </label>
+      <div class="inline-actions">
+        <button type="button" class="ghost-btn compact" id="parseQuickTask">Interpretar</button>
+      </div>
+
+      <div class="form-separator"><span>o completa lo necesario</span></div>
 
       <label>
         <span>Tarea</span>
-        <input id="taskTitle" name="title" type="text" placeholder="Ej. Preparar informe semanal" required maxlength="120" />
+        <input id="taskTitle" name="title" type="text" placeholder="Qué tienes que hacer" required maxlength="140" />
       </label>
 
-      <div class="form-grid">
+      <div class="form-grid three">
         <label>
           <span>Área</span>
           <select id="taskCategory" name="category">
-            <option value="personal">Personal</option>
             <option value="work">Trabajo</option>
+            <option value="personal">Vida personal / vivienda</option>
             <option value="study">Estudios</option>
           </select>
         </label>
@@ -115,25 +212,47 @@
             <option value="high">Alta</option>
           </select>
         </label>
+        <label>
+          <span>Energía</span>
+          <select id="taskEnergy" name="energy">
+            <option value="low">Baja</option>
+            <option value="normal" selected>Normal</option>
+            <option value="high">Alta</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          <span>Agendada para</span>
+          <input id="taskScheduledDate" name="scheduledDate" type="date" />
+        </label>
+        <label>
+          <span>Hora</span>
+          <input id="taskScheduledTime" name="scheduledTime" type="time" />
+        </label>
       </div>
 
       <div class="form-grid">
         <label>
           <span>Fecha límite</span>
-          <input id="taskDueDate" name="dueDate" type="date" />
+          <input id="taskDeadline" name="deadline" type="date" />
         </label>
         <label>
-          <span>Carga estimada</span>
-          <select id="taskEffort" name="effort">
-            <option value="1">Ligera · 1 punto</option>
-            <option value="2" selected>Media · 2 puntos</option>
-            <option value="3">Alta · 3 puntos</option>
+          <span>Tiempo estimado</span>
+          <select id="taskDuration" name="duration">
+            <option value="15">15 min</option>
+            <option value="30" selected>30 min</option>
+            <option value="45">45 min</option>
+            <option value="60">1 h</option>
+            <option value="90">1 h 30 min</option>
+            <option value="120">2 h</option>
           </select>
         </label>
       </div>
 
       <label>
-        <span>Recordatorio recurrente</span>
+        <span>Repetir</span>
         <select id="taskRecurrence" name="recurrence">
           <option value="none">No repetir</option>
           <option value="daily">Cada día</option>
@@ -142,13 +261,70 @@
         </select>
       </label>
 
+      <div class="capacity-preview" id="taskCapacityPreview"></div>
+
       <div class="modal-actions">
-        <button type="button" class="secondary-btn" id="cancelTask">Cancelar</button>
+        <button type="button" class="ghost-btn" data-close-dialog="taskModal">Cancelar</button>
         <button type="submit" class="primary-btn">Guardar tarea</button>
       </div>
     </form>
   </dialog>
 
+  <dialog id="actionModal" class="modal action-modal">
+    <div id="actionModalContent"></div>
+  </dialog>
+
+  <dialog id="settingsModal" class="modal settings-modal">
+    <form method="dialog" id="settingsForm">
+      <div class="modal-header">
+        <div>
+          <span class="section-kicker">Ajustes</span>
+          <h2>Tu día y tus calendarios</h2>
+        </div>
+        <button type="button" class="icon-btn subtle" data-close-dialog="settingsModal" aria-label="Cerrar">×</button>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          <span>Nombre</span>
+          <input id="settingsName" type="text" maxlength="40" />
+        </label>
+        <label>
+          <span>Capacidad base del día</span>
+          <select id="settingsCapacity">
+            <option value="300">5 h</option>
+            <option value="360">6 h</option>
+            <option value="420">7 h</option>
+            <option value="450">7 h 30 min</option>
+            <option value="480">8 h</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="calendar-connect-section">
+        <div>
+          <span class="section-kicker">Calendarios</span>
+          <h3>Usa tu agenda como contexto</h3>
+          <p>Las reuniones restan capacidad al día; las tareas siguen siendo el centro.</p>
+        </div>
+        <div class="calendar-buttons">
+          <button type="button" class="connect-btn" id="googleSyncBtn"><span>G</span><div><strong>Google Calendar</strong><small id="googleSyncStatus">Conectar y sincronizar</small></div></button>
+          <button type="button" class="connect-btn" id="appleExportBtn"><span></span><div><strong>Apple Calendar</strong><small>Exportar tareas en .ics</small></div></button>
+          <button type="button" class="connect-btn" id="icsImportBtn"><span>↥</span><div><strong>Importar .ics</strong><small>Apple, Google u otro calendario</small></div></button>
+          <input type="file" id="icsFileInput" accept=".ics,text/calendar" hidden />
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="ghost-btn" data-close-dialog="settingsModal">Cerrar</button>
+        <button type="submit" class="primary-btn">Guardar ajustes</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

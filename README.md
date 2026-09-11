@@ -1,13 +1,13 @@
-# Organizador personal inteligente · v3.1.1
+# Organizador personal inteligente · v3.1.2
 
 Revisión de estabilidad para iOS/PWA. Corrige el bloqueo tras pulsaciones largas y versiona físicamente los iconos para que Safari vuelva a leer el Apple Touch Icon.
 
-## Cambios 3.1.1
+## Cambios 3.1.2
 - La supresión del click sintético de iOS ahora expira automáticamente; ya no puede quedarse activada indefinidamente.
 - `pointercancel`, `touchcancel`, pérdida de foco y cierre de sheets liberan el estado táctil.
 - Los controles dentro de los menús flotantes permanecen interactivos incluso durante la corta ventana de supresión del click sintético.
 - Nuevo `apple-touch-icon-v311.png` de 180x180 y nuevos iconos PWA versionados para evitar la caché agresiva de iOS.
-- Service Worker actualizado a una nueva caché `v3.1.1`.
+- Service Worker actualizado a una nueva caché `v3.1.2`.
 
 
 ## Novedades 3.1
@@ -223,3 +223,16 @@ organizador-personal-inteligente-v3/
 - Se elimina el menú contextual nativo de copiar/pegar al mantener pulsado sobre la interfaz.
 - Los campos de formulario conservan foco, teclado y edición normal.
 - Caché PWA incrementada para forzar la actualización de estilos y JavaScript al desplegar esta revisión.
+
+
+## Corrección 3.1.2 — cierre de paneles en iOS
+
+- El cierre de bottom sheets ya no depende del listener delegado global.
+- Los botones X, Cancelar, Cerrar, No mover y equivalentes responden mediante `pointerup` directo dentro del panel.
+- Los controles de un modal abierto quedan excluidos de la supresión global del clic usada por swipe/long-press.
+- Abrir un sheet libera cualquier supresión residual en lugar de iniciar una nueva.
+- Se libera el estado táctil también al cancelar un `<dialog>` desde el sistema.
+
+### Validación de la corrección
+
+Antes de empaquetar 3.1.2 se ejecutaron comprobaciones específicas del cierre de paneles: X/Cancelar/Cerrar sobre tarea, entrada rápida, recordatorio, ajustes y hoja dinámica de acciones, incluyendo el escenario en el que la supresión del clic de un gesto permanece activa. Todos los casos liberan el estado táctil y cierran el panel. También se validaron la sintaxis de `app.js`, el manifest y la versión de caché del Service Worker.

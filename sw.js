@@ -1,4 +1,4 @@
-const CACHE_NAME = 'opi-v3.1.1-shell-1';
+const CACHE_NAME = 'opi-v3.1.2-shell-1';
 const APP_SHELL = [
   './',
   './index.html',

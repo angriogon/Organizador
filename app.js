@@ -5,7 +5,7 @@ const LEGACY_STORAGE_KEY = 'opi_tasks_v1';
 const SETTINGS_KEY = 'opi_settings_v2';
 const EXTERNAL_EVENTS_KEY = 'opi_external_events_v2';
 const UI_KEY = 'opi_ui_v3';
-const CACHE_VERSION = '3.1.1';
+const CACHE_VERSION = '3.1.2';
 
 const DEFAULT_SETTINGS = { name: 'Angel', dailyCapacity: 450, haptics: true };
 const DEFAULT_UI = { focus: { date: '', ids: [] }, gestureUses: 0, celebratedDate: '', reminderNotified: {} };
@@ -462,7 +462,12 @@ function setupRenderedState() {
   if(state.route==='home'&&!reduceMotion()) document.querySelectorAll('.focus-row').forEach(row=>row.classList.add('focus-enter'));
 }
 
-function openSheet(el) { suppressClicksFor(180); if(!el.open) el.showModal(); }
+function openSheet(el) {
+  // Abrir un panel nunca debe bloquear los controles del propio panel.
+  // La supresión de clic solo se usa para el clic sintético posterior a un gesto.
+  releaseSuppressedClicks();
+  if(!el.open) el.showModal();
+}
 function closeSheet(el) { if(el?.open) el.close(); releaseSuppressedClicks(); }
 function closeActionSheet(){ closeSheet(els.actionSheet); }
 function resetTaskForm() {
@@ -636,6 +641,37 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) relea
 document.addEventListener('touchcancel', () => suppressClicksFor(180), {capture:true, passive:true});
 
 
+
+/* Cierre robusto de bottom sheets para iOS.
+   Usamos pointerup directo en los botones de cierre, antes de que el evento llegue
+   al listener delegado del documento. Así cerrar/cancelar nunca depende del estado
+   de un gesto previo ni de cómo Safari propague el click de un <dialog>. */
+function handleDirectSheetDismiss(event) {
+  const close = event.target.closest?.('[data-close-sheet]');
+  const closeAction = event.target.closest?.('[data-close-action]');
+  const closeNow = event.target.closest?.('[data-close-now]');
+  if (!close && !closeAction && !closeNow) return;
+  event.preventDefault();
+  event.stopPropagation();
+  releaseSuppressedClicks();
+  if (close) closeSheet(document.getElementById(close.dataset.closeSheet));
+  else if (closeAction) closeActionSheet();
+  else closeNowMode();
+}
+[els.taskSheet, els.quickSheet, els.reminderSheet, els.settingsSheet, els.actionSheet, els.nowMode]
+  .filter(Boolean)
+  .forEach(el => {
+    el.addEventListener('pointerup', handleDirectSheetDismiss, {capture:true});
+    // Respaldo para activación por teclado/VoiceOver o navegadores que sinteticen click.
+    el.addEventListener('click', handleDirectSheetDismiss, {capture:true});
+  });
+
+/* También tratamos el evento cancel de <dialog> (tecla Escape / gesto del sistema)
+   como un cierre normal y liberamos cualquier estado táctil residual. */
+[els.taskSheet, els.quickSheet, els.reminderSheet, els.settingsSheet, els.actionSheet]
+  .filter(Boolean)
+  .forEach(el => el.addEventListener('cancel', () => releaseSuppressedClicks()));
+
 /* FAB: toque = tarea; pulsación larga = tres accesos rápidos. */
 let fabTimer=null;
 els.fab.addEventListener('pointerdown',()=>{state.fabLongPressed=false;els.fab.classList.add('holding');fabTimer=setTimeout(()=>{state.fabLongPressed=true;els.fabMenu.hidden=false;buzz(8);},430);});
@@ -644,11 +680,15 @@ els.fab.addEventListener('pointercancel',()=>{clearTimeout(fabTimer);els.fab.cla
 
 /* Eventos de interfaz delegados. */
 document.addEventListener('click',event=>{
-  if(clicksAreSuppressed()){event.preventDefault();event.stopPropagation();return;}
+  // Los controles que viven dentro de un modal abierto SIEMPRE deben responder.
+  // Safari/iOS puede emitir el click muy cerca de un pointercancel/long-press;
+  // no dejamos que la red de seguridad de gestos bloquee el propio sheet.
+  const insideOpenModal = event.target.closest('dialog[open], .now-mode[open]');
+  const close=event.target.closest('[data-close-sheet]');if(close){releaseSuppressedClicks();closeSheet(document.getElementById(close.dataset.closeSheet));return;}
+  if(event.target.closest('[data-close-action]')){releaseSuppressedClicks();closeActionSheet();return;}
+  if(event.target.closest('[data-close-now]')){releaseSuppressedClicks();closeNowMode();return;}
+  if(clicksAreSuppressed() && !insideOpenModal){event.preventDefault();event.stopPropagation();return;}
   const routeBtn=event.target.closest('[data-route]');if(routeBtn){state.route=routeBtn.dataset.route;state.lowEnergyMode=false;closeSmartResults();resetRevealed();render();return;}
-  const close=event.target.closest('[data-close-sheet]');if(close){closeSheet(document.getElementById(close.dataset.closeSheet));return;}
-  if(event.target.closest('[data-close-action]')){closeActionSheet();return;}
-  if(event.target.closest('[data-close-now]')){closeNowMode();return;}
   const fabAction=event.target.closest('[data-fab-action]');if(fabAction){els.fabMenu.hidden=true;if(fabAction.dataset.fabAction==='task')openTaskSheet();if(fabAction.dataset.fabAction==='quick')openQuickSheet();if(fabAction.dataset.fabAction==='reminder')openReminderSheet();return;}
   if(!event.target.closest('.fab-wrap'))els.fabMenu.hidden=true;
   const action=event.target.closest('[data-action]');if(action){const {action:kind,id}=action.dataset;if(kind==='complete'){closeActionSheet();completeTask(id);}if(kind==='edit'){closeActionSheet();setTimeout(()=>openTaskSheet({editId:id}),80);}if(kind==='snooze')openSnooze(id);if(kind==='split')openSplit(id);if(kind==='traits')openTraits(id);if(kind==='move')openMove(id);if(kind==='archive')archiveTask(id);if(kind==='delete')deleteTask(id);return;}

@@ -5,7 +5,10 @@ const LEGACY_STORAGE_KEY = 'opi_tasks_v1';
 const SETTINGS_KEY = 'opi_settings_v2';
 const EXTERNAL_EVENTS_KEY = 'opi_external_events_v2';
 const UI_KEY = 'opi_ui_v3';
-const CACHE_VERSION = '3.1.3';
+const CACHE_VERSION = '4.0.0';
+const SYNC_META_KEY = 'opi_sync_meta_v4';
+const CLOUD_BACKUP_PREFIX = 'opi_precloud_backup_v4_';
+const CLOUD_SCHEMA_VERSION = 1;
 
 const DEFAULT_SETTINGS = { name: 'Angel', dailyCapacity: 450, haptics: true };
 const DEFAULT_UI = { focus: { date: '', ids: [] }, gestureUses: 0, celebratedDate: '', reminderNotified: {} };
@@ -14,6 +17,22 @@ const CATEGORY_SHORT = { work: 'Trabajo', personal: 'Personal', study: 'Estudios
 const PRIORITY_LABELS = { low: 'Baja', medium: 'Media', high: 'Alta' };
 const ENERGY_LABELS = { low: 'Baja', normal: 'Normal', high: 'Alta' };
 const ICON = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
+
+function loadSyncMeta() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SYNC_META_KEY) || '{}');
+    const deviceId = raw.deviceId || (crypto.randomUUID ? crypto.randomUUID() : `device-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+    const value = { deviceId, userId: raw.userId || '', revision: Number(raw.revision || 0), lastSyncAt: raw.lastSyncAt || '' };
+    localStorage.setItem(SYNC_META_KEY, JSON.stringify(value));
+    return value;
+  } catch (_) {
+    return { deviceId: `device-${Date.now()}-${Math.random().toString(16).slice(2)}`, userId: '', revision: 0, lastSyncAt: '' };
+  }
+}
+function saveSyncMeta(meta) {
+  try { localStorage.setItem(SYNC_META_KEY, JSON.stringify(meta)); } catch (_) {}
+}
+const INITIAL_SYNC_META = loadSyncMeta();
 
 const state = {
   route: 'home',
@@ -32,11 +51,17 @@ const state = {
   installPrompt: null,
   pendingSpaceSuggestions: [],
   suppressClickUntil: 0,
-  fabLongPressed: false
+  fabLongPressed: false,
+  sync: {
+    client: null, user: null, channel: null, status: 'off', detail: '',
+    deviceId: INITIAL_SYNC_META.deviceId, revision: INITIAL_SYNC_META.revision,
+    dirty: false, pushing: false, applyingRemote: false, initialized: false, connecting: false,
+    pushTimer: null, changeSeq: 0, pendingRemote: null, activeUserId: ''
+  }
 };
 
 const ids = [
-  'currentDate','pageTitle','capacityRing','homeView','tasksView','calendarView','homeCard','greeting','adaptiveLine','loadEmoji','loadPercent','loadStatus','capacityContext','loadBar','focusHeadingText','focusProgress','topThreeList','startNextBtn','lowEnergyBtn','smartRecommendation','miniAgendaText','miniAgendaOpen','gapChips','gestureHint','smartResults','smartResultsTitle','smartTaskList','categoryTitle','categoryTaskList','categoryEmpty','calendarMonthTitle','calendarGrid','calendarWeekStrip','dayAgendaTitle','dayAgendaLoad','dayAgendaList','contextIsland','fab','fabMenu','taskSheet','taskForm','taskSheetKicker','taskSheetTitle','taskEditId','taskTitle','taskCategory','taskDuration','taskScheduledDate','taskScheduledTime','taskDeadline','taskRecurrence','taskPriority','taskEnergy','taskCapacityPreview','quickSheet','quickForm','quickTaskInput','reminderSheet','reminderForm','reminderTitle','reminderDate','reminderTime','reminderCategory','actionSheet','actionSheetContent','settingsSheet','settingsForm','settingsName','settingsCapacity','settingsHaptics','googleSyncStatus','icsFileInput','installAppBtn','installAppStatus','nowMode','nowTaskTitle','nowTaskMeta','nowCompleteBtn','nowSnoozeBtn','nowMoreBtn','undoBar','undoText','undoBtn','toast'
+  'currentDate','pageTitle','capacityRing','homeView','tasksView','calendarView','homeCard','greeting','adaptiveLine','loadEmoji','loadPercent','loadStatus','capacityContext','loadBar','focusHeadingText','focusProgress','topThreeList','startNextBtn','lowEnergyBtn','smartRecommendation','miniAgendaText','miniAgendaOpen','gapChips','gestureHint','smartResults','smartResultsTitle','smartTaskList','categoryTitle','categoryTaskList','categoryEmpty','calendarMonthTitle','calendarGrid','calendarWeekStrip','dayAgendaTitle','dayAgendaLoad','dayAgendaList','contextIsland','fab','fabMenu','taskSheet','taskForm','taskSheetKicker','taskSheetTitle','taskEditId','taskTitle','taskCategory','taskDuration','taskScheduledDate','taskScheduledTime','taskDeadline','taskRecurrence','taskPriority','taskEnergy','taskCapacityPreview','quickSheet','quickForm','quickTaskInput','reminderSheet','reminderForm','reminderTitle','reminderDate','reminderTime','reminderCategory','actionSheet','actionSheetContent','settingsSheet','settingsForm','settingsName','settingsCapacity','settingsHaptics','syncStateDot','syncAccountStatus','syncDeviceStatus','syncAuthPanel','syncEmail','sendSyncCodeBtn','syncOtpRow','syncOtp','verifySyncCodeBtn','syncSignedPanel','syncNowBtn','syncSignOutBtn','googleSyncStatus','icsFileInput','installAppBtn','installAppStatus','nowMode','nowTaskTitle','nowTaskMeta','nowCompleteBtn','nowSnoozeBtn','nowMoreBtn','undoBar','undoText','undoBtn','toast'
 ];
 const els = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
@@ -109,11 +134,12 @@ function normalizeTask(task) {
 function createTask(data) {
   return normalizeTask({ id: uid(), createdAt: new Date().toISOString(), completedAt: null, archivedAt: null, snoozeCount: 0, postponeAlertedAtCount: 0, subtasks: [], ...data });
 }
-function saveAll() {
+function saveAll({ skipSync = false } = {}) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
   localStorage.setItem(EXTERNAL_EVENTS_KEY, JSON.stringify(state.externalEvents));
   localStorage.setItem(UI_KEY, JSON.stringify(state.ui));
+  if (!skipSync && !state.sync.applyingRemote) scheduleCloudPush();
 }
 function saveUI() { localStorage.setItem(UI_KEY, JSON.stringify(state.ui)); }
 
@@ -312,6 +338,296 @@ function getRecommendation() {
   const tomorrow=getDayLoad(addDays(todayISO(),1));
   if(tomorrow.percent>110) return {type:'tomorrow',className:'warning',text:`😅 Mañana viene al ${tomorrow.percent}%`,action:'Revisar'};
   return null;
+}
+
+
+/* --------------------------------------------------------------------------
+   v4.0 · Sincronización multidispositivo con Supabase
+   - local-first: cada acción se guarda primero en el dispositivo.
+   - una fila JSONB por cuenta: suficiente para una app personal y muy ligera.
+   - Realtime replica los cambios a otros dispositivos conectados.
+   - RLS en Supabase impide que una cuenta lea o escriba datos de otra.
+---------------------------------------------------------------------------- */
+function isCloudConfigured() {
+  const config = window.OPI_CONFIG || {};
+  return Boolean(config.supabaseUrl && config.supabasePublishableKey);
+}
+function loadSupabaseLibrary() {
+  if (window.supabase?.createClient) return Promise.resolve(window.supabase);
+  if (window.__opiSupabaseLoader) return window.__opiSupabaseLoader;
+  window.__opiSupabaseLoader = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js';
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    script.onload = () => window.supabase?.createClient ? resolve(window.supabase) : reject(new Error('Supabase no expuso createClient'));
+    script.onerror = () => reject(new Error('No se pudo cargar Supabase JS'));
+    document.head.appendChild(script);
+  });
+  return window.__opiSupabaseLoader;
+}
+function buildCloudPayload() {
+  return {
+    schemaVersion: CLOUD_SCHEMA_VERSION,
+    tasks: state.tasks,
+    settings: state.settings,
+    externalEvents: state.externalEvents
+  };
+}
+function setSyncStatus(status, detail = '') {
+  state.sync.status = status;
+  state.sync.detail = detail;
+  updateSyncUI();
+}
+function syncStatusText() {
+  const email = state.sync.user?.email || '';
+  if (!isCloudConfigured()) return ['Sin configurar', 'Añade tu URL y Publishable key de Supabase en config.js.'];
+  if (!state.sync.client) return ['Sincronización no disponible', 'No se ha podido cargar el cliente de Supabase.'];
+  if (!state.sync.user) return ['Sin conectar', state.sync.detail || 'Inicia sesión con el mismo email en iPhone y Windows.'];
+  if (!navigator.onLine) return [email || 'Cuenta conectada', 'Sin conexión · los cambios quedan pendientes en este dispositivo.'];
+  if (state.sync.status === 'busy') return [email || 'Cuenta conectada', state.sync.detail || 'Sincronizando…'];
+  if (state.sync.status === 'error') return [email || 'Cuenta conectada', state.sync.detail || 'No se pudo sincronizar.'];
+  return [email || 'Cuenta conectada', state.sync.detail || 'Sincronización en tiempo real activa.'];
+}
+function updateSyncUI() {
+  if (!els.syncAccountStatus) return;
+  const [title, detail] = syncStatusText();
+  els.syncAccountStatus.textContent = title;
+  els.syncDeviceStatus.textContent = detail;
+  let dot = 'off';
+  if (state.sync.user && navigator.onLine && state.sync.status === 'live') dot = 'live';
+  else if (state.sync.user && state.sync.status === 'busy') dot = 'busy';
+  else if (state.sync.status === 'error') dot = 'error';
+  else if (state.sync.user && !navigator.onLine) dot = 'offline';
+  els.syncStateDot.dataset.state = dot;
+  const signed = Boolean(state.sync.user);
+  els.syncAuthPanel.hidden = signed;
+  els.syncSignedPanel.hidden = !signed;
+  if (signed && els.syncEmail) els.syncEmail.value = state.sync.user.email || '';
+}
+function backupLocalBeforeCloud(userId) {
+  try {
+    const key = `${CLOUD_BACKUP_PREFIX}${userId}`;
+    if (!localStorage.getItem(key)) {
+      localStorage.setItem(key, JSON.stringify({ createdAt: new Date().toISOString(), payload: buildCloudPayload() }));
+    }
+  } catch (_) {}
+}
+function applyCloudRow(row, { silent = false } = {}) {
+  if (!row || !row.payload) return false;
+  const payload = row.payload;
+  if (!Array.isArray(payload.tasks)) return false;
+  state.sync.applyingRemote = true;
+  state.tasks = payload.tasks.map(normalizeTask);
+  state.settings = { ...DEFAULT_SETTINGS, ...(payload.settings || {}) };
+  state.externalEvents = Array.isArray(payload.externalEvents) ? payload.externalEvents : [];
+  saveAll({ skipSync: true });
+  state.sync.applyingRemote = false;
+  state.sync.revision = Number(row.revision || state.sync.revision || 0);
+  const meta = loadSyncMeta();
+  meta.userId = state.sync.user?.id || meta.userId;
+  meta.revision = state.sync.revision;
+  meta.lastSyncAt = row.updated_at || new Date().toISOString();
+  saveSyncMeta(meta);
+  ensureDailyFocus();
+  render();
+  if (!silent) toast('Cambios recibidos de otro dispositivo.');
+  return true;
+}
+function scheduleCloudPush() {
+  state.sync.changeSeq += 1;
+  state.sync.dirty = true;
+  if (!state.sync.user || !state.sync.client || !state.sync.initialized) return;
+  clearTimeout(state.sync.pushTimer);
+  state.sync.pushTimer = setTimeout(() => pushCloudNow().catch(error => console.warn('Sync push:', error)), 280);
+}
+async function pushCloudNow({ force = false } = {}) {
+  if (!state.sync.client || !state.sync.user) return false;
+  if (!navigator.onLine) {
+    state.sync.dirty = true;
+    setSyncStatus('offline', 'Sin conexión · se sincronizará al volver Internet.');
+    return false;
+  }
+  if (state.sync.pushing && !force) return false;
+  const sequence = state.sync.changeSeq;
+  state.sync.pushing = true;
+  setSyncStatus('busy', 'Guardando cambios…');
+  const row = {
+    user_id: state.sync.user.id,
+    payload: buildCloudPayload(),
+    device_id: state.sync.deviceId
+  };
+  const { data, error } = await state.sync.client
+    .from('opi_workspaces')
+    .upsert(row, { onConflict: 'user_id' })
+    .select('user_id,payload,updated_at,revision,device_id')
+    .single();
+  state.sync.pushing = false;
+  if (error) {
+    state.sync.dirty = true;
+    setSyncStatus('error', `Pendiente de sincronizar · ${error.message || 'error de red'}`);
+    return false;
+  }
+  state.sync.revision = Number(data?.revision || state.sync.revision || 0);
+  state.sync.dirty = sequence !== state.sync.changeSeq;
+  const meta = loadSyncMeta();
+  meta.userId = state.sync.user.id;
+  meta.revision = state.sync.revision;
+  meta.lastSyncAt = data?.updated_at || new Date().toISOString();
+  saveSyncMeta(meta);
+  setSyncStatus('live', state.sync.dirty ? 'Hay cambios locales pendientes…' : 'Todo sincronizado.');
+  if (state.sync.dirty) scheduleCloudPush();
+  const pending = state.sync.pendingRemote;
+  state.sync.pendingRemote = null;
+  if (pending && Number(pending.revision || 0) > state.sync.revision) applyCloudRow(pending);
+  return true;
+}
+async function pullCloudNow({ silent = false } = {}) {
+  if (!state.sync.client || !state.sync.user || !navigator.onLine) return false;
+  if (state.sync.dirty) return pushCloudNow({ force: true });
+  setSyncStatus('busy', 'Comprobando la nube…');
+  const { data, error } = await state.sync.client
+    .from('opi_workspaces')
+    .select('user_id,payload,updated_at,revision,device_id')
+    .eq('user_id', state.sync.user.id)
+    .maybeSingle();
+  if (error) {
+    setSyncStatus('error', error.message || 'No se pudo leer la nube.');
+    return false;
+  }
+  if (!data) {
+    await pushCloudNow({ force: true });
+    if (!silent) toast('Este dispositivo ha creado tu copia en la nube.');
+    return true;
+  }
+  if (Number(data.revision || 0) > Number(state.sync.revision || 0) || !state.sync.initialized) {
+    backupLocalBeforeCloud(state.sync.user.id);
+    applyCloudRow(data, { silent: true });
+  }
+  setSyncStatus('live', 'Todo sincronizado.');
+  if (!silent) toast('Sincronización comprobada.');
+  return true;
+}
+function stopRealtimeChannel() {
+  if (state.sync.channel && state.sync.client) {
+    try { state.sync.client.removeChannel(state.sync.channel); } catch (_) {}
+  }
+  state.sync.channel = null;
+}
+function subscribeRealtime() {
+  stopRealtimeChannel();
+  if (!state.sync.client || !state.sync.user) return;
+  const userId = state.sync.user.id;
+  state.sync.channel = state.sync.client
+    .channel(`opi-workspace-${userId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'opi_workspaces', filter: `user_id=eq.${userId}` }, payload => {
+      const row = payload.new;
+      if (!row || Number(row.revision || 0) <= Number(state.sync.revision || 0)) return;
+      if (row.device_id === state.sync.deviceId) {
+        state.sync.revision = Number(row.revision || state.sync.revision);
+        return;
+      }
+      if (state.sync.dirty || state.sync.pushing) state.sync.pendingRemote = row;
+      else applyCloudRow(row);
+    })
+    .subscribe(status => {
+      if (status === 'SUBSCRIBED') setSyncStatus('live', 'Sincronización en tiempo real activa.');
+      else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setSyncStatus('error', 'Realtime desconectado · reintentando.');
+    });
+}
+async function connectCloudSession(session) {
+  if (!session?.user || !state.sync.client) return;
+  if (state.sync.activeUserId === session.user.id && (state.sync.initialized || state.sync.connecting)) return;
+  state.sync.connecting = true;
+  state.sync.user = session.user;
+  state.sync.activeUserId = session.user.id;
+  state.sync.initialized = false;
+  const meta = loadSyncMeta();
+  state.sync.revision = meta.userId === session.user.id ? Number(meta.revision || 0) : 0;
+  setSyncStatus('busy', 'Preparando tus datos…');
+  const { data, error } = await state.sync.client
+    .from('opi_workspaces')
+    .select('user_id,payload,updated_at,revision,device_id')
+    .eq('user_id', session.user.id)
+    .maybeSingle();
+  if (error) {
+    state.sync.initialized = true;
+    state.sync.connecting = false;
+    setSyncStatus('error', error.message || 'No se pudo iniciar la sincronización.');
+    return;
+  }
+  if (data) {
+    backupLocalBeforeCloud(session.user.id);
+    applyCloudRow(data, { silent: true });
+  } else {
+    state.sync.initialized = true;
+    await pushCloudNow({ force: true });
+  }
+  state.sync.initialized = true;
+  state.sync.connecting = false;
+  subscribeRealtime();
+  setSyncStatus('live', 'Todo sincronizado.');
+  updateSyncUI();
+}
+async function disconnectCloudSession() {
+  stopRealtimeChannel();
+  state.sync.user = null;
+  state.sync.activeUserId = '';
+  state.sync.initialized = false;
+  state.sync.connecting = false;
+  state.sync.dirty = false;
+  state.sync.pendingRemote = null;
+  setSyncStatus('off', 'Cuenta desconectada.');
+  updateSyncUI();
+}
+async function sendSyncCode() {
+  if (!state.sync.client) { toast('Configura Supabase primero.'); return; }
+  const email = (els.syncEmail.value || '').trim().toLowerCase();
+  if (!email || !email.includes('@')) { toast('Escribe un email válido.'); return; }
+  setSyncStatus('busy', 'Enviando código…');
+  const { error } = await state.sync.client.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+  if (error) { setSyncStatus('error', error.message || 'No se pudo enviar el código.'); toast('No se pudo enviar el código.'); return; }
+  els.syncOtpRow.hidden = false;
+  els.syncOtp.value = '';
+  setSyncStatus('off', `Código enviado a ${email}.`);
+  setTimeout(() => els.syncOtp.focus(), 80);
+}
+async function verifySyncCode() {
+  if (!state.sync.client) return;
+  const email = (els.syncEmail.value || '').trim().toLowerCase();
+  const token = (els.syncOtp.value || '').replace(/\s+/g, '');
+  if (!email || !token) { toast('Escribe el código recibido.'); return; }
+  setSyncStatus('busy', 'Verificando código…');
+  const { data, error } = await state.sync.client.auth.verifyOtp({ email, token, type: 'email' });
+  if (error || !data?.session) { setSyncStatus('error', error?.message || 'Código no válido o caducado.'); toast('No se pudo iniciar sesión.'); return; }
+  els.syncOtpRow.hidden = true;
+  await connectCloudSession(data.session);
+  toast('Cuenta conectada.');
+}
+async function signOutCloud() {
+  if (!state.sync.client) return;
+  setSyncStatus('busy', 'Desconectando…');
+  await state.sync.client.auth.signOut();
+  await disconnectCloudSession();
+  toast('Cuenta desconectada. Tus datos locales siguen aquí.');
+}
+async function initCloudSync() {
+  updateSyncUI();
+  if (!isCloudConfigured()) { setSyncStatus('off', 'Configura Supabase en config.js para activar la nube.'); return; }
+  try { await loadSupabaseLibrary(); }
+  catch (error) { console.warn(error); setSyncStatus('error', 'No se pudo cargar Supabase. La app local sigue funcionando.'); return; }
+  const config = window.OPI_CONFIG;
+  state.sync.client = window.supabase.createClient(config.supabaseUrl, config.supabasePublishableKey, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+  });
+  state.sync.client.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT' || !session) { disconnectCloudSession(); return; }
+    setTimeout(() => connectCloudSession(session).catch(error => { console.error(error); setSyncStatus('error', 'No se pudo activar la sincronización.'); }), 0);
+  });
+  const { data, error } = await state.sync.client.auth.getSession();
+  if (error) { setSyncStatus('error', error.message || 'No se pudo recuperar la sesión.'); return; }
+  if (data?.session) await connectCloudSession(data.session);
+  else setSyncStatus('off', 'Inicia sesión con el mismo email en ambos dispositivos.');
 }
 
 function render() {
@@ -606,7 +922,7 @@ function parseNaturalTask(input){
   result.title=remaining.replace(/\s{2,}/g,' ').replace(/\s+([,.;])/g,'$1').trim().replace(/^[-,.;\s]+|[-,.;\s]+$/g,'');return result;
 }
 
-function openSettings(){els.settingsName.value=state.settings.name;els.settingsCapacity.value=String(state.settings.dailyCapacity);els.settingsHaptics.checked=Boolean(state.settings.haptics);updateInstallStatus();openSheet(els.settingsSheet);}
+function openSettings(){els.settingsName.value=state.settings.name;els.settingsCapacity.value=String(state.settings.dailyCapacity);els.settingsHaptics.checked=Boolean(state.settings.haptics);updateInstallStatus();updateSyncUI();openSheet(els.settingsSheet);}
 function updateInstallStatus(){if(!els.installAppStatus)return;const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;if(standalone){els.installAppStatus.textContent='Ya está instalada';els.installAppBtn.disabled=true;}else if(state.installPrompt){els.installAppStatus.textContent='Instalar con un toque';els.installAppBtn.disabled=false;}else if(isIOS()){els.installAppStatus.textContent='Añadir a pantalla de inicio en Safari';els.installAppBtn.disabled=false;}else{els.installAppStatus.textContent='Disponible cuando el navegador lo permita';els.installAppBtn.disabled=false;}}
 function isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)||(/Macintosh/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1);}
 async function installPWA(){if(state.installPrompt){const prompt=state.installPrompt;state.installPrompt=null;await prompt.prompt();await prompt.userChoice;updateInstallStatus();return;}closeSheet(els.settingsSheet);if(isIOS()){showActionSheet(`${sheetHeader('Instalar en iPhone','Añadir a pantalla de inicio')}<div class="action-summary">En Safari: pulsa <strong>Compartir</strong> → <strong>Añadir a pantalla de inicio</strong>. iOS no permite lanzar ese cuadro automáticamente desde una web.</div><div class="sheet-actions"><button class="primary-btn" data-close-action>Entendido</button></div>`);}else{showActionSheet(`${sheetHeader('Instalar app','Tu navegador decide cuándo ofrecerla')}<div class="action-summary">La PWA ya incluye manifest, modo standalone y funcionamiento offline. Si el navegador no muestra instalación todavía, abre su menú y busca “Instalar aplicación”.</div><div class="sheet-actions"><button class="primary-btn" data-close-action>Entendido</button></div>`);}}
@@ -829,6 +1145,7 @@ els.quickForm.addEventListener('submit',event=>{event.preventDefault();const par
 els.reminderForm.addEventListener('submit',event=>{event.preventDefault();const title=els.reminderTitle.value.trim();if(!title)return;const snapshot=deepClone(state.tasks);const reminder=createTask({title,kind:'reminder',category:els.reminderCategory.value,priority:'medium',energy:'low',scheduledDate:els.reminderDate.value,scheduledTime:els.reminderTime.value,deadline:'',duration:5,recurrence:'none'});state.tasks.push(reminder);considerTaskForFocus(reminder);saveAll();closeSheet(els.reminderSheet);render();pushUndo('Recordatorio creado',snapshot);toast('Recordatorio guardado.');});
 
 els.settingsForm.addEventListener('submit',event=>{event.preventDefault();state.settings.name=els.settingsName.value.trim()||'Angel';state.settings.dailyCapacity=Number(els.settingsCapacity.value||450);state.settings.haptics=els.settingsHaptics.checked;saveAll();closeSheet(els.settingsSheet);render();toast('Ajustes guardados.');});
+els.sendSyncCodeBtn.addEventListener('click',()=>sendSyncCode().catch(error=>{console.error(error);setSyncStatus('error','No se pudo enviar el código.');}));els.verifySyncCodeBtn.addEventListener('click',()=>verifySyncCode().catch(error=>{console.error(error);setSyncStatus('error','No se pudo verificar el código.');}));els.syncNowBtn.addEventListener('click',()=>pullCloudNow().catch(error=>{console.error(error);setSyncStatus('error','No se pudo sincronizar.');}));els.syncSignOutBtn.addEventListener('click',()=>signOutCloud().catch(error=>{console.error(error);setSyncStatus('error','No se pudo cerrar la sesión.');}));
 document.getElementById('googleSyncBtn').addEventListener('click',syncGoogleCalendar);document.getElementById('appleExportBtn').addEventListener('click',exportAppleICS);document.getElementById('icsImportBtn').addEventListener('click',()=>els.icsFileInput.click());els.icsFileInput.addEventListener('change',async()=>{const file=els.icsFileInput.files?.[0];if(file)await importICS(file);els.icsFileInput.value='';});els.installAppBtn.addEventListener('click',installPWA);
 
 document.getElementById('calendarPrev').addEventListener('click',()=>{if(isMobile()){state.calendarSelectedDate=addDays(state.calendarSelectedDate,-7);state.calendarCursor=startOfMonth(parseISODate(state.calendarSelectedDate));}else state.calendarCursor=new Date(state.calendarCursor.getFullYear(),state.calendarCursor.getMonth()-1,1);renderCalendar();});
@@ -841,7 +1158,8 @@ window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();sta
 
 function checkReminders(){const now=new Date(),date=toISO(now),minutes=now.getHours()*60+now.getMinutes();state.tasks.filter(t=>!t.completedAt&&!t.archivedAt&&t.kind==='reminder'&&t.scheduledDate===date&&t.scheduledTime).forEach(t=>{const target=parseTimeMinutes(t.scheduledTime);if(target!==null&&minutes>=target&&minutes-target<=2&&!state.ui.reminderNotified[t.id]){state.ui.reminderNotified[t.id]=new Date().toISOString();saveUI();buzz(20);toast(`🔔 ${t.title}`);}});}
 setInterval(checkReminders,30000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkReminders();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){checkReminders();if(state.sync.user)pullCloudNow({silent:true}).catch(()=>{});}});
+window.addEventListener('pageshow',()=>{if(state.sync.user&&navigator.onLine)pullCloudNow({silent:true}).catch(()=>{});});
 
 /* iOS/PWA: evita el menú nativo de copiar/pegar al mantener pulsado.
    No cancelamos pointerdown/touchstart para conservar foco, teclado y gestos propios. */
@@ -857,6 +1175,9 @@ document.addEventListener('dblclick',event=>event.preventDefault(),{passive:fals
 window.addEventListener('wheel',event=>{if(event.ctrlKey)event.preventDefault();},{passive:false});
 window.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&['+','-','=','0'].includes(event.key))event.preventDefault();});
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=3.1.3',{updateViaCache:'none'}).then(reg=>reg.update()).catch(error=>console.warn('Service worker:',error)));}
+window.addEventListener('online',()=>{updateSyncUI();if(state.sync.user){if(state.sync.dirty)pushCloudNow().catch(()=>{});else pullCloudNow({silent:true}).catch(()=>{});}});
+window.addEventListener('offline',()=>{if(state.sync.user)setSyncStatus('offline','Sin conexión · los cambios quedarán pendientes.');else updateSyncUI();});
 
-ensureDailyFocus();render();checkReminders();
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=4.0.0',{updateViaCache:'none'}).then(reg=>reg.update()).catch(error=>console.warn('Service worker:',error)));}
+
+ensureDailyFocus();render();checkReminders();updateSyncUI();initCloudSync().catch(error=>{console.error('Cloud sync:',error);setSyncStatus('error','La sincronización no pudo iniciarse.');});

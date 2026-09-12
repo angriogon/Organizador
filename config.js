@@ -1,13 +1,23 @@
-// Configuración del Organizador personal inteligente · v4.0
+// Configuración del Organizador personal inteligente · v4.1
 //
-// Google Calendar (opcional): OAuth Client ID de tipo Web application.
-// Supabase (necesario solo para sincronización multidispositivo):
-//   - supabaseUrl: URL del proyecto, por ejemplo https://xxxx.supabase.co
-//   - supabasePublishableKey: Publishable key pública del proyecto.
+// FIREBASE (necesario para sincronización iPhone ↔ Windows):
+// Copia aquí el objeto de configuración que Firebase Console muestra en
+// Project settings > General > Your apps > SDK setup and configuration > Config.
 //
-// IMPORTANTE: no pongas nunca aquí la service_role key ni secretos privados.
+// IMPORTANTE:
+// - Estos valores de una Web App de Firebase NO son una contraseña ni una service account.
+// - La seguridad real se aplica con Firebase Authentication + firestore.rules.
+// - No añadas claves privadas, archivos de service account ni secretos de servidor a GitHub.
+//
+// GOOGLE CALENDAR (opcional): OAuth Client ID de tipo Web application.
 window.OPI_CONFIG = {
   googleClientId: '',
-  supabaseUrl: '',
-  supabasePublishableKey: ''
+  firebase: {
+    apiKey: '',
+    authDomain: '',
+    projectId: '',
+    storageBucket: '',
+    messagingSenderId: '',
+    appId: ''
+  }
 };

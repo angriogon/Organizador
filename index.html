@@ -10,8 +10,8 @@
   <meta name="apple-mobile-web-app-title" content="Organizador" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="format-detection" content="telephone=no" />
-  <title>Organizador personal inteligente · 4.0</title>
-  <link rel="manifest" href="manifest.webmanifest?v=4.0.0" />
+  <title>Organizador personal inteligente · 4.1</title>
+  <link rel="manifest" href="manifest.webmanifest?v=4.1.0" />
   <link rel="icon" type="image/x-icon" href="favicon-v313.ico" sizes="any" />
   <link rel="shortcut icon" type="image/x-icon" href="favicon-v313.ico" />
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32-v313.png" />
@@ -20,8 +20,8 @@
   <link rel="apple-touch-icon-precomposed" sizes="180x180" href="icons/apple-touch-icon-v313.png" />
   <meta name="msapplication-TileColor" content="#07121f" />
   <meta name="msapplication-TileImage" content="icons/icon-512-v313.png" />
-  <meta name="msapplication-config" content="browserconfig.xml?v=4.0.0" />
-  <link rel="stylesheet" href="styles.css?v=4.0.0" />
+  <meta name="msapplication-config" content="browserconfig.xml?v=4.1.0" />
+  <link rel="stylesheet" href="styles.css?v=4.1.0" />
 </head>
 <body>
   <!-- Sprite SVG local: iconografía consistente, sin librerías externas. -->
@@ -275,19 +275,20 @@
               <div class="sync-state-copy"><strong id="syncAccountStatus">Sin conectar</strong><span id="syncDeviceStatus">Tus datos siguen guardados en este dispositivo.</span></div>
             </div>
             <div id="syncAuthPanel" class="sync-auth-panel">
-              <label class="field sync-field"><span>Email</span><input id="syncEmail" type="email" inputmode="email" autocomplete="email" placeholder="tu@email.com" /></label>
-              <button type="button" class="connect-btn sync-wide-btn" id="sendSyncCodeBtn"><strong>Enviar código</strong><span>Recibirás un código de un solo uso por email.</span></button>
-              <div id="syncOtpRow" class="sync-otp-row" hidden>
-                <label class="field sync-field"><span>Código</span><input id="syncOtp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="123456" /></label>
-                <button type="button" class="primary-btn" id="verifySyncCodeBtn">Entrar</button>
+              <label class="field sync-field"><span>Email</span><input id="syncEmail" type="email" inputmode="email" autocomplete="username" placeholder="tu@email.com" /></label>
+              <label class="field sync-field"><span>Contraseña</span><input id="syncPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Mínimo 6 caracteres" /></label>
+              <div class="sync-auth-actions">
+                <button type="button" class="primary-btn" id="syncSignInBtn">Entrar</button>
+                <button type="button" class="ghost-btn" id="syncCreateBtn">Crear cuenta</button>
               </div>
+              <button type="button" class="sync-link-btn" id="syncResetBtn">He olvidado mi contraseña</button>
             </div>
             <div id="syncSignedPanel" class="sync-signed-panel" hidden>
               <button type="button" class="connect-btn" id="syncNowBtn"><strong>Sincronizar ahora</strong><span>Comprobar la nube y este dispositivo.</span></button>
               <button type="button" class="connect-btn" id="syncSignOutBtn"><strong>Desconectar cuenta</strong><span>Los datos locales se conservan.</span></button>
             </div>
           </div>
-          <p class="micro-note">La app sigue funcionando sin conexión. Primera conexión: inicia sesión primero en el dispositivo que ya contiene tus datos reales. Al volver Internet, los cambios pendientes se envían automáticamente.</p>
+          <p class="micro-note">Firebase mantiene las tareas sincronizadas en tiempo real. Primera conexión: crea o inicia la cuenta primero en el dispositivo que ya contiene tus datos reales. La app conserva copia local y Firestore reenvía los cambios cuando vuelve Internet.</p>
         </div>
         <div class="settings-section"><span class="section-kicker">Calendarios</span><h3>La agenda da contexto, no manda</h3><div class="connect-grid"><button type="button" class="connect-btn" id="googleSyncBtn"><strong>Google Calendar</strong><span id="googleSyncStatus">Conectar y sincronizar</span></button><button type="button" class="connect-btn" id="appleExportBtn"><strong>Apple Calendar</strong><span>Exportar tareas .ics</span></button><button type="button" class="connect-btn" id="icsImportBtn"><strong>Importar .ics</strong><span>Apple, Google u otro</span></button><input type="file" id="icsFileInput" accept=".ics,text/calendar" hidden /></div></div>
         <div class="settings-section"><span class="section-kicker">Instalación</span><h3>Úsala como una app</h3><button type="button" class="connect-btn install-btn" id="installAppBtn"><strong>Instalar Organizador</strong><span id="installAppStatus">Disponible en PWA compatible</span></button></div>
@@ -311,7 +312,7 @@
   <div class="undo-bar" id="undoBar" role="status" aria-live="polite" hidden><span id="undoText">Tarea completada</span><button id="undoBtn">Deshacer</button></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="config.js?v=4.0.0"></script>
-  <script src="app.js?v=4.0.0"></script>
+  <script src="config.js?v=4.1.0"></script>
+  <script src="app.js?v=4.1.0"></script>
 </body>
 </html>

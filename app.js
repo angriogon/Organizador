@@ -5,10 +5,11 @@ const LEGACY_STORAGE_KEY = 'opi_tasks_v1';
 const SETTINGS_KEY = 'opi_settings_v2';
 const EXTERNAL_EVENTS_KEY = 'opi_external_events_v2';
 const UI_KEY = 'opi_ui_v3';
-const CACHE_VERSION = '4.0.0';
-const SYNC_META_KEY = 'opi_sync_meta_v4';
-const CLOUD_BACKUP_PREFIX = 'opi_precloud_backup_v4_';
-const CLOUD_SCHEMA_VERSION = 1;
+const CACHE_VERSION = '4.1.0';
+const SYNC_META_KEY = 'opi_sync_meta_v41';
+const CLOUD_BACKUP_PREFIX = 'opi_prefirebase_backup_v41_';
+const CLOUD_SCHEMA_VERSION = 2;
+const FIREBASE_SDK_VERSION = '12.18.0';
 
 const DEFAULT_SETTINGS = { name: 'Angel', dailyCapacity: 450, haptics: true };
 const DEFAULT_UI = { focus: { date: '', ids: [] }, gestureUses: 0, celebratedDate: '', reminderNotified: {} };
@@ -53,15 +54,15 @@ const state = {
   suppressClickUntil: 0,
   fabLongPressed: false,
   sync: {
-    client: null, user: null, channel: null, status: 'off', detail: '',
-    deviceId: INITIAL_SYNC_META.deviceId, revision: INITIAL_SYNC_META.revision,
-    dirty: false, pushing: false, applyingRemote: false, initialized: false, connecting: false,
-    pushTimer: null, changeSeq: 0, pendingRemote: null, activeUserId: ''
+    firebase: null, app: null, auth: null, db: null, user: null, status: 'off', detail: '',
+    deviceId: INITIAL_SYNC_META.deviceId, applyingRemote: false, initialized: false, connecting: false,
+    syncTimer: null, activeUserId: '', unsubTasks: null, unsubMeta: null,
+    baselineTasks: new Map(), baselineMeta: '', syncInFlight: false, forceRetry: false
   }
 };
 
 const ids = [
-  'currentDate','pageTitle','capacityRing','homeView','tasksView','calendarView','homeCard','greeting','adaptiveLine','loadEmoji','loadPercent','loadStatus','capacityContext','loadBar','focusHeadingText','focusProgress','topThreeList','startNextBtn','lowEnergyBtn','smartRecommendation','miniAgendaText','miniAgendaOpen','gapChips','gestureHint','smartResults','smartResultsTitle','smartTaskList','categoryTitle','categoryTaskList','categoryEmpty','calendarMonthTitle','calendarGrid','calendarWeekStrip','dayAgendaTitle','dayAgendaLoad','dayAgendaList','contextIsland','fab','fabMenu','taskSheet','taskForm','taskSheetKicker','taskSheetTitle','taskEditId','taskTitle','taskCategory','taskDuration','taskScheduledDate','taskScheduledTime','taskDeadline','taskRecurrence','taskPriority','taskEnergy','taskCapacityPreview','quickSheet','quickForm','quickTaskInput','reminderSheet','reminderForm','reminderTitle','reminderDate','reminderTime','reminderCategory','actionSheet','actionSheetContent','settingsSheet','settingsForm','settingsName','settingsCapacity','settingsHaptics','syncStateDot','syncAccountStatus','syncDeviceStatus','syncAuthPanel','syncEmail','sendSyncCodeBtn','syncOtpRow','syncOtp','verifySyncCodeBtn','syncSignedPanel','syncNowBtn','syncSignOutBtn','googleSyncStatus','icsFileInput','installAppBtn','installAppStatus','nowMode','nowTaskTitle','nowTaskMeta','nowCompleteBtn','nowSnoozeBtn','nowMoreBtn','undoBar','undoText','undoBtn','toast'
+  'currentDate','pageTitle','capacityRing','homeView','tasksView','calendarView','homeCard','greeting','adaptiveLine','loadEmoji','loadPercent','loadStatus','capacityContext','loadBar','focusHeadingText','focusProgress','topThreeList','startNextBtn','lowEnergyBtn','smartRecommendation','miniAgendaText','miniAgendaOpen','gapChips','gestureHint','smartResults','smartResultsTitle','smartTaskList','categoryTitle','categoryTaskList','categoryEmpty','calendarMonthTitle','calendarGrid','calendarWeekStrip','dayAgendaTitle','dayAgendaLoad','dayAgendaList','contextIsland','fab','fabMenu','taskSheet','taskForm','taskSheetKicker','taskSheetTitle','taskEditId','taskTitle','taskCategory','taskDuration','taskScheduledDate','taskScheduledTime','taskDeadline','taskRecurrence','taskPriority','taskEnergy','taskCapacityPreview','quickSheet','quickForm','quickTaskInput','reminderSheet','reminderForm','reminderTitle','reminderDate','reminderTime','reminderCategory','actionSheet','actionSheetContent','settingsSheet','settingsForm','settingsName','settingsCapacity','settingsHaptics','syncStateDot','syncAccountStatus','syncDeviceStatus','syncAuthPanel','syncEmail','syncPassword','syncSignInBtn','syncCreateBtn','syncResetBtn','syncSignedPanel','syncNowBtn','syncSignOutBtn','googleSyncStatus','icsFileInput','installAppBtn','installAppStatus','nowMode','nowTaskTitle','nowTaskMeta','nowCompleteBtn','nowSnoozeBtn','nowMoreBtn','undoBar','undoText','undoBtn','toast'
 ];
 const els = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
@@ -342,37 +343,41 @@ function getRecommendation() {
 
 
 /* --------------------------------------------------------------------------
-   v4.0 · Sincronización multidispositivo con Supabase
-   - local-first: cada acción se guarda primero en el dispositivo.
-   - una fila JSONB por cuenta: suficiente para una app personal y muy ligera.
-   - Realtime replica los cambios a otros dispositivos conectados.
-   - RLS en Supabase impide que una cuenta lea o escriba datos de otra.
+   v4.1 · Sincronización multidispositivo con Firebase
+   - Firebase Authentication: email + contraseña, sin SMTP ni dominio propio.
+   - Cloud Firestore: una colección de tareas por usuario + un documento meta.
+   - onSnapshot replica cambios en tiempo real entre iPhone y Windows.
+   - Persistencia IndexedDB de Firestore mantiene la experiencia local-first.
 ---------------------------------------------------------------------------- */
 function isCloudConfigured() {
-  const config = window.OPI_CONFIG || {};
-  return Boolean(config.supabaseUrl && config.supabasePublishableKey);
+  const config = window.OPI_CONFIG?.firebase || {};
+  return Boolean(config.apiKey && config.authDomain && config.projectId && config.appId);
 }
-function loadSupabaseLibrary() {
-  if (window.supabase?.createClient) return Promise.resolve(window.supabase);
-  if (window.__opiSupabaseLoader) return window.__opiSupabaseLoader;
-  window.__opiSupabaseLoader = new Promise((resolve, reject) => {
+function loadScriptOnce(src, marker) {
+  if (document.querySelector(`script[data-opi-sdk="${marker}"]`)) return Promise.resolve();
+  return new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.min.js';
+    script.src = src;
     script.async = true;
     script.crossOrigin = 'anonymous';
-    script.onload = () => window.supabase?.createClient ? resolve(window.supabase) : reject(new Error('Supabase no expuso createClient'));
-    script.onerror = () => reject(new Error('No se pudo cargar Supabase JS'));
+    script.dataset.opiSdk = marker;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error(`No se pudo cargar ${marker}`));
     document.head.appendChild(script);
   });
-  return window.__opiSupabaseLoader;
 }
-function buildCloudPayload() {
-  return {
-    schemaVersion: CLOUD_SCHEMA_VERSION,
-    tasks: state.tasks,
-    settings: state.settings,
-    externalEvents: state.externalEvents
-  };
+async function loadFirebaseLibraries() {
+  if (window.firebase?.apps && window.firebase.auth && window.firebase.firestore) return window.firebase;
+  if (window.__opiFirebaseLoader) return window.__opiFirebaseLoader;
+  window.__opiFirebaseLoader = (async () => {
+    const base = `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}`;
+    await loadScriptOnce(`${base}/firebase-app-compat.js`, 'firebase-app');
+    await loadScriptOnce(`${base}/firebase-auth-compat.js`, 'firebase-auth');
+    await loadScriptOnce(`${base}/firebase-firestore-compat.js`, 'firebase-firestore');
+    if (!window.firebase?.initializeApp || !window.firebase?.auth || !window.firebase?.firestore) throw new Error('Firebase no se inició correctamente.');
+    return window.firebase;
+  })();
+  return window.__opiFirebaseLoader;
 }
 function setSyncStatus(status, detail = '') {
   state.sync.status = status;
@@ -381,10 +386,10 @@ function setSyncStatus(status, detail = '') {
 }
 function syncStatusText() {
   const email = state.sync.user?.email || '';
-  if (!isCloudConfigured()) return ['Sin configurar', 'Añade tu URL y Publishable key de Supabase en config.js.'];
-  if (!state.sync.client) return ['Sincronización no disponible', 'No se ha podido cargar el cliente de Supabase.'];
-  if (!state.sync.user) return ['Sin conectar', state.sync.detail || 'Inicia sesión con el mismo email en iPhone y Windows.'];
-  if (!navigator.onLine) return [email || 'Cuenta conectada', 'Sin conexión · los cambios quedan pendientes en este dispositivo.'];
+  if (!isCloudConfigured()) return ['Sin configurar', 'Copia la configuración Web de Firebase en config.js.'];
+  if (!state.sync.auth || !state.sync.db) return ['Firebase preparado', state.sync.detail || 'La app local sigue funcionando.'];
+  if (!state.sync.user) return ['Sin conectar', state.sync.detail || 'Entra con la misma cuenta en iPhone y Windows.'];
+  if (!navigator.onLine) return [email || 'Cuenta conectada', 'Sin conexión · Firestore guardará los cambios y los enviará al volver Internet.'];
   if (state.sync.status === 'busy') return [email || 'Cuenta conectada', state.sync.detail || 'Sincronizando…'];
   if (state.sync.status === 'error') return [email || 'Cuenta conectada', state.sync.detail || 'No se pudo sincronizar.'];
   return [email || 'Cuenta conectada', state.sync.detail || 'Sincronización en tiempo real activa.'];
@@ -409,225 +414,352 @@ function backupLocalBeforeCloud(userId) {
   try {
     const key = `${CLOUD_BACKUP_PREFIX}${userId}`;
     if (!localStorage.getItem(key)) {
-      localStorage.setItem(key, JSON.stringify({ createdAt: new Date().toISOString(), payload: buildCloudPayload() }));
+      localStorage.setItem(key, JSON.stringify({
+        createdAt: new Date().toISOString(),
+        tasks: state.tasks,
+        settings: state.settings,
+        externalEvents: state.externalEvents
+      }));
     }
   } catch (_) {}
 }
-function applyCloudRow(row, { silent = false } = {}) {
-  if (!row || !row.payload) return false;
-  const payload = row.payload;
-  if (!Array.isArray(payload.tasks)) return false;
+function taskForCloud(task) { return normalizeTask(task); }
+function taskFingerprint(task) { return JSON.stringify(taskForCloud(task)); }
+function metaForCloud() {
+  return {
+    schemaVersion: CLOUD_SCHEMA_VERSION,
+    settings: state.settings,
+    externalEvents: state.externalEvents
+  };
+}
+function metaFingerprint(meta = metaForCloud()) {
+  return JSON.stringify({
+    schemaVersion: Number(meta.schemaVersion || CLOUD_SCHEMA_VERSION),
+    settings: { ...DEFAULT_SETTINGS, ...(meta.settings || {}) },
+    externalEvents: Array.isArray(meta.externalEvents) ? meta.externalEvents : []
+  });
+}
+function setTaskBaseline(tasks = state.tasks) {
+  state.sync.baselineTasks = new Map(tasks.map(task => [task.id, taskFingerprint(task)]));
+}
+function setMetaBaseline(meta = metaForCloud()) { state.sync.baselineMeta = metaFingerprint(meta); }
+function userRefs() {
+  if (!state.sync.db || !state.sync.user) return null;
+  const userRef = state.sync.db.collection('users').doc(state.sync.user.uid);
+  return { userRef, tasks: userRef.collection('tasks'), meta: userRef.collection('meta').doc('main') };
+}
+function remoteTaskFromDoc(doc) { return normalizeTask({ id: doc.id, ...doc.data() }); }
+function applyRemoteTasks(tasks, { silent = true } = {}) {
   state.sync.applyingRemote = true;
-  state.tasks = payload.tasks.map(normalizeTask);
-  state.settings = { ...DEFAULT_SETTINGS, ...(payload.settings || {}) };
-  state.externalEvents = Array.isArray(payload.externalEvents) ? payload.externalEvents : [];
+  state.tasks = tasks.map(normalizeTask);
+  setTaskBaseline(state.tasks);
   saveAll({ skipSync: true });
   state.sync.applyingRemote = false;
-  state.sync.revision = Number(row.revision || state.sync.revision || 0);
-  const meta = loadSyncMeta();
-  meta.userId = state.sync.user?.id || meta.userId;
-  meta.revision = state.sync.revision;
-  meta.lastSyncAt = row.updated_at || new Date().toISOString();
-  saveSyncMeta(meta);
   ensureDailyFocus();
   render();
-  if (!silent) toast('Cambios recibidos de otro dispositivo.');
-  return true;
+  if (!silent) toast('Tareas actualizadas desde otro dispositivo.');
+}
+function applyRemoteMeta(data, { silent = true } = {}) {
+  if (!data) return;
+  state.sync.applyingRemote = true;
+  state.settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}) };
+  state.externalEvents = Array.isArray(data.externalEvents) ? data.externalEvents : [];
+  setMetaBaseline({ schemaVersion: data.schemaVersion || CLOUD_SCHEMA_VERSION, settings: state.settings, externalEvents: state.externalEvents });
+  saveAll({ skipSync: true });
+  state.sync.applyingRemote = false;
+  render();
+  if (!silent) toast('Ajustes actualizados desde otro dispositivo.');
 }
 function scheduleCloudPush() {
-  state.sync.changeSeq += 1;
-  state.sync.dirty = true;
-  if (!state.sync.user || !state.sync.client || !state.sync.initialized) return;
-  clearTimeout(state.sync.pushTimer);
-  state.sync.pushTimer = setTimeout(() => pushCloudNow().catch(error => console.warn('Sync push:', error)), 280);
+  if (state.sync.applyingRemote) return;
+  if (!state.sync.user || !state.sync.db || !state.sync.initialized) return;
+  clearTimeout(state.sync.syncTimer);
+  state.sync.syncTimer = setTimeout(() => syncLocalToFirebase().catch(error => {
+    console.warn('Firebase sync:', error);
+    state.sync.forceRetry = true;
+    setSyncStatus('error', firebaseErrorText(error));
+  }), 40);
 }
-async function pushCloudNow({ force = false } = {}) {
-  if (!state.sync.client || !state.sync.user) return false;
-  if (!navigator.onLine) {
-    state.sync.dirty = true;
-    setSyncStatus('offline', 'Sin conexión · se sincronizará al volver Internet.');
-    return false;
+async function syncLocalToFirebase({ force = false, waitForServer = false } = {}) {
+  if (!state.sync.user || !state.sync.db || !state.sync.initialized || state.sync.syncInFlight) return false;
+  const refs = userRefs();
+  if (!refs) return false;
+  state.sync.syncInFlight = true;
+  const fieldValue = state.sync.firebase.firestore.FieldValue;
+  const currentMap = new Map(state.tasks.map(task => [task.id, taskFingerprint(task)]));
+  const writes = [];
+  const previous = state.sync.baselineTasks || new Map();
+  const full = force || state.sync.forceRetry;
+
+  for (const task of state.tasks) {
+    const fingerprint = currentMap.get(task.id);
+    if (full || previous.get(task.id) !== fingerprint) {
+      const cloudTask = taskForCloud(task);
+      writes.push(refs.tasks.doc(task.id).set({
+        ...cloudTask,
+        updatedAtCloud: fieldValue.serverTimestamp(),
+        deviceId: state.sync.deviceId
+      }, { merge: false }));
+    }
   }
-  if (state.sync.pushing && !force) return false;
-  const sequence = state.sync.changeSeq;
-  state.sync.pushing = true;
-  setSyncStatus('busy', 'Guardando cambios…');
-  const row = {
-    user_id: state.sync.user.id,
-    payload: buildCloudPayload(),
-    device_id: state.sync.deviceId
-  };
-  const { data, error } = await state.sync.client
-    .from('opi_workspaces')
-    .upsert(row, { onConflict: 'user_id' })
-    .select('user_id,payload,updated_at,revision,device_id')
-    .single();
-  state.sync.pushing = false;
-  if (error) {
-    state.sync.dirty = true;
-    setSyncStatus('error', `Pendiente de sincronizar · ${error.message || 'error de red'}`);
-    return false;
+  for (const id of previous.keys()) {
+    if (!currentMap.has(id)) writes.push(refs.tasks.doc(id).delete());
   }
-  state.sync.revision = Number(data?.revision || state.sync.revision || 0);
-  state.sync.dirty = sequence !== state.sync.changeSeq;
-  const meta = loadSyncMeta();
-  meta.userId = state.sync.user.id;
-  meta.revision = state.sync.revision;
-  meta.lastSyncAt = data?.updated_at || new Date().toISOString();
-  saveSyncMeta(meta);
-  setSyncStatus('live', state.sync.dirty ? 'Hay cambios locales pendientes…' : 'Todo sincronizado.');
-  if (state.sync.dirty) scheduleCloudPush();
-  const pending = state.sync.pendingRemote;
-  state.sync.pendingRemote = null;
-  if (pending && Number(pending.revision || 0) > state.sync.revision) applyCloudRow(pending);
-  return true;
-}
-async function pullCloudNow({ silent = false } = {}) {
-  if (!state.sync.client || !state.sync.user || !navigator.onLine) return false;
-  if (state.sync.dirty) return pushCloudNow({ force: true });
-  setSyncStatus('busy', 'Comprobando la nube…');
-  const { data, error } = await state.sync.client
-    .from('opi_workspaces')
-    .select('user_id,payload,updated_at,revision,device_id')
-    .eq('user_id', state.sync.user.id)
-    .maybeSingle();
-  if (error) {
-    setSyncStatus('error', error.message || 'No se pudo leer la nube.');
-    return false;
+
+  const meta = metaForCloud();
+  const metaFp = metaFingerprint(meta);
+  if (full || state.sync.baselineMeta !== metaFp) {
+    writes.push(refs.meta.set({
+      ...meta,
+      initialized: true,
+      updatedAtCloud: fieldValue.serverTimestamp(),
+      deviceId: state.sync.deviceId
+    }, { merge: false }));
   }
-  if (!data) {
-    await pushCloudNow({ force: true });
-    if (!silent) toast('Este dispositivo ha creado tu copia en la nube.');
+
+  setTaskBaseline(state.tasks);
+  setMetaBaseline(meta);
+  state.sync.forceRetry = false;
+
+  if (!writes.length) {
+    state.sync.syncInFlight = false;
+    if (state.sync.user) setSyncStatus(navigator.onLine ? 'live' : 'offline', navigator.onLine ? 'Todo sincronizado.' : 'Sin conexión · cambios guardados localmente.');
     return true;
   }
-  if (Number(data.revision || 0) > Number(state.sync.revision || 0) || !state.sync.initialized) {
-    backupLocalBeforeCloud(state.sync.user.id);
-    applyCloudRow(data, { silent: true });
-  }
-  setSyncStatus('live', 'Todo sincronizado.');
-  if (!silent) toast('Sincronización comprobada.');
+
+  setSyncStatus(navigator.onLine ? 'busy' : 'offline', navigator.onLine ? 'Guardando cambios…' : 'Sin conexión · Firestore los enviará al volver Internet.');
+  // Firestore aplica primero las escrituras a su caché local. No esperamos cuando estamos
+  // offline porque la Promise se resolverá únicamente al confirmar el servidor.
+  const settled = Promise.allSettled(writes).then(results => {
+    const rejected = results.find(result => result.status === 'rejected');
+    state.sync.syncInFlight = false;
+    if (rejected) {
+      state.sync.forceRetry = true;
+      setSyncStatus('error', firebaseErrorText(rejected.reason));
+      return false;
+    }
+    setSyncStatus(navigator.onLine ? 'live' : 'offline', navigator.onLine ? 'Todo sincronizado.' : 'Cambios pendientes de red.');
+    return true;
+  });
+  if (waitForServer && navigator.onLine) return settled;
+  settled.catch(() => {});
+  if (!navigator.onLine) state.sync.syncInFlight = false;
   return true;
 }
-function stopRealtimeChannel() {
-  if (state.sync.channel && state.sync.client) {
-    try { state.sync.client.removeChannel(state.sync.channel); } catch (_) {}
+function stopFirebaseListeners() {
+  if (typeof state.sync.unsubTasks === 'function') { try { state.sync.unsubTasks(); } catch (_) {} }
+  if (typeof state.sync.unsubMeta === 'function') { try { state.sync.unsubMeta(); } catch (_) {} }
+  state.sync.unsubTasks = null;
+  state.sync.unsubMeta = null;
+}
+function subscribeFirebaseRealtime() {
+  stopFirebaseListeners();
+  const refs = userRefs();
+  if (!refs) return;
+  state.sync.unsubTasks = refs.tasks.onSnapshot({ includeMetadataChanges: true }, snapshot => {
+    const tasks = snapshot.docs.map(remoteTaskFromDoc);
+    applyRemoteTasks(tasks, { silent: true });
+    if (!snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites) setSyncStatus('live', 'Sincronización en tiempo real activa.');
+  }, error => setSyncStatus('error', firebaseErrorText(error)));
+  state.sync.unsubMeta = refs.meta.onSnapshot({ includeMetadataChanges: true }, snapshot => {
+    if (snapshot.exists) applyRemoteMeta(snapshot.data(), { silent: true });
+    if (!snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites) setSyncStatus('live', 'Sincronización en tiempo real activa.');
+  }, error => setSyncStatus('error', firebaseErrorText(error)));
+}
+async function initializeCloudFromLocal(refs) {
+  setSyncStatus('busy', 'Creando tu copia segura en Firebase…');
+  const fieldValue = state.sync.firebase.firestore.FieldValue;
+  const batch = state.sync.db.batch();
+  for (const task of state.tasks) {
+    batch.set(refs.tasks.doc(task.id), { ...taskForCloud(task), updatedAtCloud: fieldValue.serverTimestamp(), deviceId: state.sync.deviceId });
   }
-  state.sync.channel = null;
+  batch.set(refs.meta, { ...metaForCloud(), initialized: true, createdAtCloud: fieldValue.serverTimestamp(), updatedAtCloud: fieldValue.serverTimestamp(), deviceId: state.sync.deviceId });
+  await batch.commit();
+  setTaskBaseline(state.tasks);
+  setMetaBaseline();
 }
-function subscribeRealtime() {
-  stopRealtimeChannel();
-  if (!state.sync.client || !state.sync.user) return;
-  const userId = state.sync.user.id;
-  state.sync.channel = state.sync.client
-    .channel(`opi-workspace-${userId}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'opi_workspaces', filter: `user_id=eq.${userId}` }, payload => {
-      const row = payload.new;
-      if (!row || Number(row.revision || 0) <= Number(state.sync.revision || 0)) return;
-      if (row.device_id === state.sync.deviceId) {
-        state.sync.revision = Number(row.revision || state.sync.revision);
-        return;
-      }
-      if (state.sync.dirty || state.sync.pushing) state.sync.pendingRemote = row;
-      else applyCloudRow(row);
-    })
-    .subscribe(status => {
-      if (status === 'SUBSCRIBED') setSyncStatus('live', 'Sincronización en tiempo real activa.');
-      else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setSyncStatus('error', 'Realtime desconectado · reintentando.');
-    });
-}
-async function connectCloudSession(session) {
-  if (!session?.user || !state.sync.client) return;
-  if (state.sync.activeUserId === session.user.id && (state.sync.initialized || state.sync.connecting)) return;
+async function connectFirebaseUser(user) {
+  if (!user || !state.sync.db) return;
+  if (state.sync.activeUserId === user.uid && (state.sync.initialized || state.sync.connecting)) return;
+  stopFirebaseListeners();
   state.sync.connecting = true;
-  state.sync.user = session.user;
-  state.sync.activeUserId = session.user.id;
   state.sync.initialized = false;
-  const meta = loadSyncMeta();
-  state.sync.revision = meta.userId === session.user.id ? Number(meta.revision || 0) : 0;
+  state.sync.user = user;
+  state.sync.activeUserId = user.uid;
+  updateSyncUI();
   setSyncStatus('busy', 'Preparando tus datos…');
-  const { data, error } = await state.sync.client
-    .from('opi_workspaces')
-    .select('user_id,payload,updated_at,revision,device_id')
-    .eq('user_id', session.user.id)
-    .maybeSingle();
-  if (error) {
+  const refs = userRefs();
+  try {
+    const [tasksSnap, metaSnap] = await Promise.all([refs.tasks.get(), refs.meta.get()]);
+    const cloudInitialized = metaSnap.exists || !tasksSnap.empty;
+    if (cloudInitialized) {
+      backupLocalBeforeCloud(user.uid);
+      applyRemoteTasks(tasksSnap.docs.map(remoteTaskFromDoc), { silent: true });
+      if (metaSnap.exists) applyRemoteMeta(metaSnap.data(), { silent: true });
+      else {
+        setMetaBaseline();
+        await refs.meta.set({ ...metaForCloud(), initialized: true, updatedAtCloud: state.sync.firebase.firestore.FieldValue.serverTimestamp(), deviceId: state.sync.deviceId });
+      }
+    } else {
+      await initializeCloudFromLocal(refs);
+    }
     state.sync.initialized = true;
     state.sync.connecting = false;
-    setSyncStatus('error', error.message || 'No se pudo iniciar la sincronización.');
-    return;
+    const meta = loadSyncMeta();
+    meta.userId = user.uid;
+    meta.lastSyncAt = new Date().toISOString();
+    saveSyncMeta(meta);
+    subscribeFirebaseRealtime();
+    setSyncStatus(navigator.onLine ? 'live' : 'offline', navigator.onLine ? 'Todo sincronizado.' : 'Modo offline activo.');
+    updateSyncUI();
+  } catch (error) {
+    state.sync.connecting = false;
+    state.sync.initialized = false;
+    setSyncStatus('error', firebaseErrorText(error));
+    throw error;
   }
-  if (data) {
-    backupLocalBeforeCloud(session.user.id);
-    applyCloudRow(data, { silent: true });
-  } else {
-    state.sync.initialized = true;
-    await pushCloudNow({ force: true });
-  }
-  state.sync.initialized = true;
-  state.sync.connecting = false;
-  subscribeRealtime();
-  setSyncStatus('live', 'Todo sincronizado.');
-  updateSyncUI();
 }
 async function disconnectCloudSession() {
-  stopRealtimeChannel();
+  stopFirebaseListeners();
   state.sync.user = null;
   state.sync.activeUserId = '';
   state.sync.initialized = false;
   state.sync.connecting = false;
-  state.sync.dirty = false;
-  state.sync.pendingRemote = null;
-  setSyncStatus('off', 'Cuenta desconectada.');
+  state.sync.baselineTasks = new Map();
+  state.sync.baselineMeta = '';
+  setSyncStatus('off', 'Cuenta desconectada. Tus datos locales se conservan.');
   updateSyncUI();
 }
-async function sendSyncCode() {
-  if (!state.sync.client) { toast('Configura Supabase primero.'); return; }
-  const email = (els.syncEmail.value || '').trim().toLowerCase();
-  if (!email || !email.includes('@')) { toast('Escribe un email válido.'); return; }
-  setSyncStatus('busy', 'Enviando código…');
-  const { error } = await state.sync.client.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
-  if (error) { setSyncStatus('error', error.message || 'No se pudo enviar el código.'); toast('No se pudo enviar el código.'); return; }
-  els.syncOtpRow.hidden = false;
-  els.syncOtp.value = '';
-  setSyncStatus('off', `Código enviado a ${email}.`);
-  setTimeout(() => els.syncOtp.focus(), 80);
+function syncCredentials() {
+  const email = (els.syncEmail?.value || '').trim().toLowerCase();
+  const password = els.syncPassword?.value || '';
+  if (!email || !email.includes('@')) throw new Error('Escribe un email válido.');
+  if (!password || password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres.');
+  return { email, password };
 }
-async function verifySyncCode() {
-  if (!state.sync.client) return;
-  const email = (els.syncEmail.value || '').trim().toLowerCase();
-  const token = (els.syncOtp.value || '').replace(/\s+/g, '');
-  if (!email || !token) { toast('Escribe el código recibido.'); return; }
-  setSyncStatus('busy', 'Verificando código…');
-  const { data, error } = await state.sync.client.auth.verifyOtp({ email, token, type: 'email' });
-  if (error || !data?.session) { setSyncStatus('error', error?.message || 'Código no válido o caducado.'); toast('No se pudo iniciar sesión.'); return; }
-  els.syncOtpRow.hidden = true;
-  await connectCloudSession(data.session);
-  toast('Cuenta conectada.');
+function firebaseErrorText(error) {
+  const code = error?.code || '';
+  const map = {
+    'auth/invalid-email': 'El email no es válido.',
+    'auth/invalid-credential': 'Email o contraseña incorrectos.',
+    'auth/user-not-found': 'No existe una cuenta con ese email.',
+    'auth/wrong-password': 'Email o contraseña incorrectos.',
+    'auth/email-already-in-use': 'Ya existe una cuenta con ese email.',
+    'auth/weak-password': 'La contraseña es demasiado sencilla.',
+    'auth/too-many-requests': 'Demasiados intentos. Espera unos minutos y vuelve a probar.',
+    'auth/network-request-failed': 'No hay conexión con Firebase.',
+    'auth/unauthorized-domain': 'Este dominio no está autorizado en Firebase Authentication.',
+    'permission-denied': 'Firestore ha rechazado el acceso. Revisa las reglas de seguridad.',
+    'firestore/permission-denied': 'Firestore ha rechazado el acceso. Revisa las reglas de seguridad.'
+  };
+  return map[code] || error?.message || 'No se pudo completar la sincronización.';
+}
+async function signInSyncAccount() {
+  if (!state.sync.auth) { toast('Configura Firebase primero.'); return; }
+  let credentials;
+  try { credentials = syncCredentials(); } catch (error) { toast(error.message); return; }
+  setSyncStatus('busy', 'Entrando…');
+  try {
+    await state.sync.auth.signInWithEmailAndPassword(credentials.email, credentials.password);
+    if (els.syncPassword) els.syncPassword.value = '';
+    toast('Cuenta conectada.');
+  } catch (error) {
+    setSyncStatus('error', firebaseErrorText(error));
+    toast(firebaseErrorText(error));
+  }
+}
+async function createSyncAccount() {
+  if (!state.sync.auth) { toast('Configura Firebase primero.'); return; }
+  let credentials;
+  try { credentials = syncCredentials(); } catch (error) { toast(error.message); return; }
+  setSyncStatus('busy', 'Creando cuenta…');
+  try {
+    await state.sync.auth.createUserWithEmailAndPassword(credentials.email, credentials.password);
+    if (els.syncPassword) els.syncPassword.value = '';
+    toast('Cuenta creada. Tus datos se están sincronizando.');
+  } catch (error) {
+    setSyncStatus('error', firebaseErrorText(error));
+    toast(firebaseErrorText(error));
+  }
+}
+async function resetSyncPassword() {
+  if (!state.sync.auth) { toast('Configura Firebase primero.'); return; }
+  const email = (els.syncEmail?.value || '').trim().toLowerCase();
+  if (!email || !email.includes('@')) { toast('Escribe primero tu email.'); return; }
+  try {
+    await state.sync.auth.sendPasswordResetEmail(email);
+    toast('Firebase ha enviado el correo para cambiar la contraseña.');
+  } catch (error) {
+    toast(firebaseErrorText(error));
+  }
 }
 async function signOutCloud() {
-  if (!state.sync.client) return;
+  if (!state.sync.auth) return;
   setSyncStatus('busy', 'Desconectando…');
-  await state.sync.client.auth.signOut();
+  await state.sync.auth.signOut();
   await disconnectCloudSession();
   toast('Cuenta desconectada. Tus datos locales siguen aquí.');
 }
+async function pullCloudNow({ silent = false } = {}) {
+  if (!state.sync.user || !state.sync.db) return false;
+  if (!navigator.onLine) {
+    setSyncStatus('offline', 'Sin conexión · Firestore sincronizará automáticamente al volver Internet.');
+    if (!silent) toast('Ahora mismo estás sin conexión.');
+    return false;
+  }
+  setSyncStatus('busy', 'Comprobando Firebase…');
+  await syncLocalToFirebase({ waitForServer: true });
+  const refs = userRefs();
+  try {
+    const [tasksSnap, metaSnap] = await Promise.all([
+      refs.tasks.get({ source: 'server' }),
+      refs.meta.get({ source: 'server' })
+    ]);
+    applyRemoteTasks(tasksSnap.docs.map(remoteTaskFromDoc), { silent: true });
+    if (metaSnap.exists) applyRemoteMeta(metaSnap.data(), { silent: true });
+    setSyncStatus('live', 'Todo sincronizado.');
+    if (!silent) toast('Firebase está al día.');
+    return true;
+  } catch (error) {
+    setSyncStatus('error', firebaseErrorText(error));
+    if (!silent) toast(firebaseErrorText(error));
+    return false;
+  }
+}
 async function initCloudSync() {
   updateSyncUI();
-  if (!isCloudConfigured()) { setSyncStatus('off', 'Configura Supabase en config.js para activar la nube.'); return; }
-  try { await loadSupabaseLibrary(); }
-  catch (error) { console.warn(error); setSyncStatus('error', 'No se pudo cargar Supabase. La app local sigue funcionando.'); return; }
-  const config = window.OPI_CONFIG;
-  state.sync.client = window.supabase.createClient(config.supabaseUrl, config.supabasePublishableKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
-  });
-  state.sync.client.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_OUT' || !session) { disconnectCloudSession(); return; }
-    setTimeout(() => connectCloudSession(session).catch(error => { console.error(error); setSyncStatus('error', 'No se pudo activar la sincronización.'); }), 0);
-  });
-  const { data, error } = await state.sync.client.auth.getSession();
-  if (error) { setSyncStatus('error', error.message || 'No se pudo recuperar la sesión.'); return; }
-  if (data?.session) await connectCloudSession(data.session);
-  else setSyncStatus('off', 'Inicia sesión con el mismo email en ambos dispositivos.');
+  if (!isCloudConfigured()) {
+    setSyncStatus('off', 'Añade los datos de tu Web App de Firebase en config.js.');
+    return;
+  }
+  try { await loadFirebaseLibraries(); }
+  catch (error) {
+    console.warn(error);
+    setSyncStatus('error', 'No se pudo cargar Firebase. La app local sigue funcionando.');
+    return;
+  }
+  try {
+    const cfg = window.OPI_CONFIG.firebase;
+    state.sync.firebase = window.firebase;
+    state.sync.app = window.firebase.apps.length ? window.firebase.app() : window.firebase.initializeApp(cfg);
+    state.sync.auth = window.firebase.auth();
+    state.sync.db = window.firebase.firestore();
+    try {
+      await state.sync.db.enablePersistence({ synchronizeTabs: true });
+    } catch (error) {
+      if (!['failed-precondition', 'unimplemented'].includes(error?.code)) console.warn('Firestore persistence:', error);
+    }
+    try { await state.sync.auth.setPersistence(window.firebase.auth.Auth.Persistence.LOCAL); }
+    catch (error) { console.warn('Auth persistence:', error); }
+    state.sync.auth.onAuthStateChanged(user => {
+      if (!user) { disconnectCloudSession(); return; }
+      connectFirebaseUser(user).catch(error => console.error('Firebase user sync:', error));
+    });
+    setSyncStatus('off', 'Inicia sesión con la misma cuenta en tus dispositivos.');
+  } catch (error) {
+    console.error('Firebase init:', error);
+    setSyncStatus('error', firebaseErrorText(error));
+  }
 }
 
 function render() {
@@ -1145,7 +1277,7 @@ els.quickForm.addEventListener('submit',event=>{event.preventDefault();const par
 els.reminderForm.addEventListener('submit',event=>{event.preventDefault();const title=els.reminderTitle.value.trim();if(!title)return;const snapshot=deepClone(state.tasks);const reminder=createTask({title,kind:'reminder',category:els.reminderCategory.value,priority:'medium',energy:'low',scheduledDate:els.reminderDate.value,scheduledTime:els.reminderTime.value,deadline:'',duration:5,recurrence:'none'});state.tasks.push(reminder);considerTaskForFocus(reminder);saveAll();closeSheet(els.reminderSheet);render();pushUndo('Recordatorio creado',snapshot);toast('Recordatorio guardado.');});
 
 els.settingsForm.addEventListener('submit',event=>{event.preventDefault();state.settings.name=els.settingsName.value.trim()||'Angel';state.settings.dailyCapacity=Number(els.settingsCapacity.value||450);state.settings.haptics=els.settingsHaptics.checked;saveAll();closeSheet(els.settingsSheet);render();toast('Ajustes guardados.');});
-els.sendSyncCodeBtn.addEventListener('click',()=>sendSyncCode().catch(error=>{console.error(error);setSyncStatus('error','No se pudo enviar el código.');}));els.verifySyncCodeBtn.addEventListener('click',()=>verifySyncCode().catch(error=>{console.error(error);setSyncStatus('error','No se pudo verificar el código.');}));els.syncNowBtn.addEventListener('click',()=>pullCloudNow().catch(error=>{console.error(error);setSyncStatus('error','No se pudo sincronizar.');}));els.syncSignOutBtn.addEventListener('click',()=>signOutCloud().catch(error=>{console.error(error);setSyncStatus('error','No se pudo cerrar la sesión.');}));
+els.syncSignInBtn.addEventListener('click',()=>signInSyncAccount().catch(error=>{console.error(error);setSyncStatus('error',firebaseErrorText(error));}));els.syncCreateBtn.addEventListener('click',()=>createSyncAccount().catch(error=>{console.error(error);setSyncStatus('error',firebaseErrorText(error));}));els.syncResetBtn.addEventListener('click',()=>resetSyncPassword().catch(error=>{console.error(error);toast(firebaseErrorText(error));}));els.syncNowBtn.addEventListener('click',()=>pullCloudNow().catch(error=>{console.error(error);setSyncStatus('error',firebaseErrorText(error));}));els.syncSignOutBtn.addEventListener('click',()=>signOutCloud().catch(error=>{console.error(error);setSyncStatus('error',firebaseErrorText(error));}));
 document.getElementById('googleSyncBtn').addEventListener('click',syncGoogleCalendar);document.getElementById('appleExportBtn').addEventListener('click',exportAppleICS);document.getElementById('icsImportBtn').addEventListener('click',()=>els.icsFileInput.click());els.icsFileInput.addEventListener('change',async()=>{const file=els.icsFileInput.files?.[0];if(file)await importICS(file);els.icsFileInput.value='';});els.installAppBtn.addEventListener('click',installPWA);
 
 document.getElementById('calendarPrev').addEventListener('click',()=>{if(isMobile()){state.calendarSelectedDate=addDays(state.calendarSelectedDate,-7);state.calendarCursor=startOfMonth(parseISODate(state.calendarSelectedDate));}else state.calendarCursor=new Date(state.calendarCursor.getFullYear(),state.calendarCursor.getMonth()-1,1);renderCalendar();});
@@ -1175,9 +1307,9 @@ document.addEventListener('dblclick',event=>event.preventDefault(),{passive:fals
 window.addEventListener('wheel',event=>{if(event.ctrlKey)event.preventDefault();},{passive:false});
 window.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&['+','-','=','0'].includes(event.key))event.preventDefault();});
 
-window.addEventListener('online',()=>{updateSyncUI();if(state.sync.user){if(state.sync.dirty)pushCloudNow().catch(()=>{});else pullCloudNow({silent:true}).catch(()=>{});}});
+window.addEventListener('online',()=>{updateSyncUI();if(state.sync.user){state.sync.forceRetry=true;syncLocalToFirebase().catch(()=>{});setTimeout(()=>pullCloudNow({silent:true}).catch(()=>{}),350);}});
 window.addEventListener('offline',()=>{if(state.sync.user)setSyncStatus('offline','Sin conexión · los cambios quedarán pendientes.');else updateSyncUI();});
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=4.0.0',{updateViaCache:'none'}).then(reg=>reg.update()).catch(error=>console.warn('Service worker:',error)));}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=4.1.0',{updateViaCache:'none'}).then(reg=>reg.update()).catch(error=>console.warn('Service worker:',error)));}
 
-ensureDailyFocus();render();checkReminders();updateSyncUI();initCloudSync().catch(error=>{console.error('Cloud sync:',error);setSyncStatus('error','La sincronización no pudo iniciarse.');});
+ensureDailyFocus();render();checkReminders();updateSyncUI();initCloudSync().catch(error=>{console.error('Firebase sync:',error);setSyncStatus('error','La sincronización con Firebase no pudo iniciarse.');});

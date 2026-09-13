@@ -5,7 +5,7 @@ const LEGACY_STORAGE_KEY = 'opi_tasks_v1';
 const SETTINGS_KEY = 'opi_settings_v2';
 const EXTERNAL_EVENTS_KEY = 'opi_external_events_v2';
 const UI_KEY = 'opi_ui_v3';
-const CACHE_VERSION = '5.0.3';
+const CACHE_VERSION = '5.0.4';
 const SYNC_META_KEY = 'opi_sync_meta_v41';
 const CLOUD_BACKUP_PREFIX = 'opi_prefirebase_backup_v41_';
 const CLOUD_SCHEMA_VERSION = 5;
@@ -16,7 +16,7 @@ const SECURITY_KEY = 'opi_security_v50';
 const FIREBASE_SDK_VERSION = '12.18.0';
 
 const DEFAULT_SETTINGS = { name: 'Angel', dailyCapacity: 450, haptics: true, weekendMode: true, theme: 'neutral', defaultProfile: 'normal', privacyMode: false, intelligentMode: true, bufferPercent: 15, maxHighPerDay: 2, workFreeWeekend: false, appearance: 'system' };
-const DEFAULT_UI = { focus: { date: '', ids: [] }, gestureUses: 0, celebratedDate: '', reminderNotified: {}, tightDayDate: '', dayProfileDate: '', dayProfile: 'normal', activeNowTaskId: '', activeNowStartedAt: '', lastOpenedDate: '', lastOpenedAt: '', recoveryPendingDays: 0, commandKnown: false, planningWeekStart: '', smartList: '', advancedTaskOpen: false, onboardingLevel: 0, lastAutoBackupAt: '' };
+const DEFAULT_UI = { focus: { date: '', ids: [] }, gestureUses: 0, celebratedDate: '', reminderNotified: {}, tightDayDate: '', dayProfileDate: '', dayProfile: 'normal', activeNowTaskId: '', activeNowStartedAt: '', lastOpenedDate: '', lastOpenedAt: '', recoveryPendingDays: 0, commandKnown: false, planningWeekStart: '', smartList: '', advancedTaskOpen: false, onboardingLevel: 0, lastAutoBackupAt: '', weekendPlanning: { selectedDate: '', active: false }, workFocus: { enabled: false, start: '09:00', end: '17:00', overrideDate: '' } };
 const DEFAULT_LEARNING = { durationSamples: [], decisions: [], completionHours: {}, lastInsightAt: '', categoryHints: {}, contextStats: {}, weeklySnapshots: [], pauseReasons: {}, taskTemplates: {}, correctionHints: {}, actualSessions: [] };
 const DEFAULT_SECURITY = { enabled: false, pinHash: '', biometricCredentialId: '' };
 const CATEGORY_LABELS = { work: 'Trabajo', personal: 'Vida personal / vivienda', study: 'Estudios' };
@@ -83,6 +83,7 @@ const state = {
   suppressClickUntil: 0,
   blockClickThroughUntil: 0,
   fabLongPressed: false,
+  workFocusWasActive: false,
   sync: {
     firebase: null, app: null, auth: null, db: null, user: null, status: 'off', detail: '',
     deviceId: INITIAL_SYNC_META.deviceId, applyingRemote: false, initialized: false, connecting: false,
@@ -92,7 +93,7 @@ const state = {
 };
 
 const ids = [
-  'currentDate','pageTitle','capacityRing','homeView','tasksView','calendarView','planningView','planningInsight','planningWeekBoard','riskList','smartLists','outcomeList','premiumInsight','yearHeatmap','planningBalanceBtn','planningCleanBtn','newOutcomeBtn','homeCard','greeting','adaptiveLine','loadEmoji','loadPercent','loadStatus','capacityContext','dayProfileBtn','dayProfileLabel','loadBar','focusHeadingText','focusProgress','topThreeList','startNextBtn','lowEnergyBtn','tightDayBtn','smartRecommendation','miniAgendaText','miniAgendaOpen','gapChips','gestureHint','smartResults','smartResultsTitle','contextGroupSummary','smartTaskList','sequenceStartBtn','categoryTitle','categoryTaskList','categoryEmpty','calendarMonthTitle','calendarGrid','calendarWeekStrip','weekCapacityStrip','dayAgendaTitle','dayAgendaLoad','dayAgendaList','contextIsland','fab','fabMenu','taskSheet','taskForm','taskSheetKicker','taskSheetTitle','taskEditId','taskTitle','taskCategory','taskDuration','taskScheduledDate','taskScheduledTime','taskDeadline','taskRecurrence','taskPriority','taskEnergy','taskTodayPriority','taskNonNegotiable','taskProject','taskOutcome','taskDependsOn','taskContext','taskAdvancedToggle','taskAdvancedFields','taskDateCycle','taskPriorityCycle','taskVoiceBtn','quickVoiceBtn','taskHistoryBtn','taskCapacityPreview','quickSheet','quickForm','quickTaskInput','reminderSheet','reminderForm','reminderTitle','reminderDate','reminderTime','reminderCategory','actionSheet','actionSheetContent','settingsSheet','settingsForm','settingsName','settingsCapacity','settingsHaptics','settingsWeekendMode','settingsTheme','settingsDefaultProfile','settingsPrivacyMode','settingsIntelligentMode','settingsBuffer','settingsMaxHigh','settingsWorkFreeWeekend','settingsAppearance','openTrashBtn','exportCsvBtn','autoBackupBtn','syncIssueBadge','syncStateDot','syncAccountStatus','syncDeviceStatus','syncAuthPanel','syncEmail','syncPassword','syncSignInBtn','syncCreateBtn','syncResetBtn','syncSignedPanel','syncNowBtn','syncSignOutBtn','googleSyncStatus','icsFileInput','installAppBtn','installAppStatus','localLockBtn','localLockStatus','biometricSetupBtn','biometricStatus','localBiometricBtn','exportBackupBtn','importBackupBtn','backupFileInput','resetAppBtn','nowMode','nowTaskTitle','nowTaskMeta','nowCompleteBtn','nowPauseBtn','nowSnoozeBtn','nowNextBtn','nowMoreBtn','privacyCurtain','localLockScreen','localLockPin','localUnlockBtn','localLockError','undoBar','undoText','undoBtn','toast'
+  'currentDate','pageTitle','capacityRing','homeView','tasksView','calendarView','planningView','planningInsight','planningWeekBoard','weekendPlanBtn','riskList','smartLists','outcomeList','premiumInsight','yearHeatmap','planningBalanceBtn','planningCleanBtn','newOutcomeBtn','homeCard','greeting','adaptiveLine','loadEmoji','loadPercent','loadStatus','capacityContext','dayProfileBtn','dayProfileLabel','loadBar','focusHeadingText','focusProgress','topThreeList','startNextBtn','lowEnergyBtn','tightDayBtn','smartRecommendation','miniAgendaText','miniAgendaOpen','gapChips','gestureHint','smartResults','smartResultsTitle','contextGroupSummary','smartTaskList','sequenceStartBtn','categoryTitle','workFocusBtn','categoryTaskList','categoryEmpty','calendarMonthTitle','calendarGrid','calendarWeekStrip','weekCapacityStrip','dayAgendaTitle','dayAgendaLoad','dayAgendaList','contextIsland','fab','fabMenu','taskSheet','taskForm','taskSheetKicker','taskSheetTitle','taskEditId','taskTitle','taskCategory','taskDuration','taskScheduledDate','taskScheduledTime','taskDeadline','taskRecurrence','taskPriority','taskEnergy','taskTodayPriority','taskNonNegotiable','taskProject','taskOutcome','taskDependsOn','taskContext','taskAdvancedToggle','taskAdvancedFields','taskDateCycle','taskPriorityCycle','taskVoiceBtn','quickVoiceBtn','taskHistoryBtn','taskCapacityPreview','quickSheet','quickForm','quickTaskInput','reminderSheet','reminderForm','reminderTitle','reminderDate','reminderTime','reminderCategory','actionSheet','actionSheetContent','settingsSheet','settingsForm','settingsName','settingsCapacity','settingsHaptics','settingsWeekendMode','settingsTheme','settingsDefaultProfile','settingsPrivacyMode','settingsIntelligentMode','settingsBuffer','settingsMaxHigh','settingsWorkFreeWeekend','settingsAppearance','openTrashBtn','exportCsvBtn','autoBackupBtn','syncIssueBadge','syncStateDot','syncAccountStatus','syncDeviceStatus','syncAuthPanel','syncEmail','syncPassword','syncSignInBtn','syncCreateBtn','syncResetBtn','syncSignedPanel','syncNowBtn','syncSignOutBtn','googleSyncStatus','icsFileInput','installAppBtn','installAppStatus','localLockBtn','localLockStatus','biometricSetupBtn','biometricStatus','localBiometricBtn','exportBackupBtn','importBackupBtn','backupFileInput','resetAppBtn','nowMode','nowTaskTitle','nowTaskMeta','nowCompleteBtn','nowPauseBtn','nowSnoozeBtn','nowNextBtn','nowMoreBtn','privacyCurtain','localLockScreen','localLockPin','localUnlockBtn','localLockError','undoBar','undoText','undoBtn','toast'
 ];
 const els = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
@@ -106,7 +107,7 @@ function loadSettings() {
 function loadUI() {
   try {
     const raw = JSON.parse(localStorage.getItem(UI_KEY) || '{}');
-    return { ...DEFAULT_UI, ...raw, focus: { ...DEFAULT_UI.focus, ...(raw.focus || {}) }, reminderNotified: raw.reminderNotified || {} };
+    return { ...DEFAULT_UI, ...raw, focus: { ...DEFAULT_UI.focus, ...(raw.focus || {}) }, reminderNotified: raw.reminderNotified || {}, weekendPlanning: { ...DEFAULT_UI.weekendPlanning, ...(raw.weekendPlanning || {}) }, workFocus: { ...DEFAULT_UI.workFocus, ...(raw.workFocus || {}) } };
   } catch (_) { return deepClone(DEFAULT_UI); }
 }
 function loadExternalEvents() {
@@ -228,6 +229,27 @@ function completedToday() { return state.tasks.filter(t => t.completedAt && toIS
 function parseTimeMinutes(time) { if (!time || !/^\d{2}:\d{2}$/.test(time)) return null; const [h,m]=time.split(':').map(Number); return h*60+m; }
 function minutesToTime(value) { const n=Math.max(0,Math.min(1439,Math.round(value))); return `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`; }
 function isMobile() { return matchMedia('(max-width: 760px)').matches; }
+function isStandaloneApp(){ return matchMedia('(display-mode: standalone)').matches || navigator.standalone===true; }
+function isWindowsPWA(){ return isStandaloneApp() && !isIOS() && /Windows/i.test(navigator.userAgent||''); }
+function isWeekendNow(){ const day=new Date().getDay(); return day===0||day===6; }
+function nextWeekMonday(){ const day=new Date().getDay(),delta=day===0?1:8-day; return addDays(todayISO(),delta); }
+function nextWeekDates(){ const monday=nextWeekMonday(); return Array.from({length:7},(_,i)=>addDays(monday,i)); }
+function workFocusConfig(){ return {...DEFAULT_UI.workFocus,...(state.ui.workFocus||{})}; }
+function isWorkFocusActive(at=new Date()){
+  if(!isWindowsPWA())return false;
+  const cfg=workFocusConfig(),today=toISO(at);if(!cfg.enabled||cfg.overrideDate===today)return false;
+  const day=at.getDay();if(day===0||day===6)return false;
+  const now=at.getHours()*60+at.getMinutes(),start=parseTimeMinutes(cfg.start),end=parseTimeMinutes(cfg.end);
+  if(start===null||end===null||start===end)return false;
+  return start<end ? now>=start&&now<end : (now>=start||now<end);
+}
+function enforceWorkFocus(){
+  const active=isWorkFocusActive();
+  document.body.classList.toggle('work-focus-mode',active);
+  if(active&&state.route!=='work')state.route='work';
+  if(!active&&state.workFocusWasActive&&state.route==='work')state.route='home';
+  state.workFocusWasActive=active;
+}
 function reduceMotion() { return matchMedia('(prefers-reduced-motion: reduce)').matches; }
 
 function getBusyMinutes(date) {
@@ -984,7 +1006,8 @@ async function initCloudSync() {
 
 function render() {
   document.documentElement.dataset.theme=state.settings.theme||'neutral';
-  renderHeader(); renderRoute(); renderHome(); renderCategory(); renderCalendar(); renderPlanning(); renderContextIsland(); updateInstallStatus(); updateSyncUI(); applyAppearance();
+  enforceWorkFocus();
+  renderHeader(); renderRoute(); renderPremiumModes(); renderHome(); renderCategory(); renderCalendar(); renderPlanning(); renderContextIsland(); updateInstallStatus(); updateSyncUI(); applyAppearance();
   requestAnimationFrame(()=>setupRenderedState());
 }
 function renderHeader() {
@@ -1002,7 +1025,19 @@ function renderRoute() {
   if(state.route==='home'){els.homeView.classList.add('active');els.pageTitle.textContent='Inicio';}
   else if(state.route==='calendar'){els.calendarView.classList.add('active');els.pageTitle.textContent='Calendario';}
   else if(state.route==='planning'){els.planningView.classList.add('active');els.pageTitle.textContent='Planificar';}
-  else {els.tasksView.classList.add('active');els.pageTitle.textContent=CATEGORY_SHORT[state.route];}
+  else {els.tasksView.classList.add('active');els.pageTitle.textContent=(state.route==='work'&&isWorkFocusActive())?'Trabajo · Enfoque':CATEGORY_SHORT[state.route];}
+}
+function renderPremiumModes(){
+  const windowsPWA=isWindowsPWA(),focusActive=isWorkFocusActive(),focusCfg=workFocusConfig();
+  if(els.workFocusBtn){
+    els.workFocusBtn.hidden=!(windowsPWA&&state.route==='work');
+    els.workFocusBtn.classList.toggle('active',focusActive);
+    const span=els.workFocusBtn.querySelector('span');if(span)span.textContent=focusActive?`Enfoque · ${focusCfg.end}`:(focusCfg.enabled?'Enfoque programado':'Enfoque');
+  }
+  if(els.weekendPlanBtn){
+    const show=windowsPWA&&isWeekendNow();els.weekendPlanBtn.hidden=!show;
+    els.weekendPlanBtn.classList.toggle('active',Boolean(state.ui.weekendPlanning?.active));
+  }
 }
 function renderHome() {
   const today=todayISO(),hour=new Date().getHours(),load=getDayLoad(today),status=loadStatus(load.percent),focus=getFocusTasks();
@@ -1199,7 +1234,8 @@ function populateDependencyOptions(currentId=''){
   if([...els.taskDependsOn.options].some(o=>o.value===current))els.taskDependsOn.value=current;
 }
 function resetTaskForm() {
-  els.taskForm.reset();els.taskEditId.value='';els.taskScheduledDate.value=todayISO();els.taskCategory.value=['work','personal','study'].includes(state.route)?state.route:'personal';els.taskDuration.value='30';els.taskScheduledTime.value='';els.taskDeadline.value='';els.taskRecurrence.value='none';
+  const planningDate=(isWindowsPWA()&&isWeekendNow()&&state.ui.weekendPlanning?.active)?weekPlanningSelectedDate():todayISO();
+  els.taskForm.reset();els.taskEditId.value='';els.taskScheduledDate.value=planningDate;els.taskCategory.value=['work','personal','study'].includes(state.route)?state.route:'personal';els.taskDuration.value='30';els.taskScheduledTime.value='';els.taskDeadline.value='';els.taskRecurrence.value='none';
   if(els.taskProject)els.taskProject.value='';if(els.taskOutcome)els.taskOutcome.value='';if(els.taskContext)els.taskContext.value='';if(els.taskDependsOn)els.taskDependsOn.value='';
   setChoice('priority','medium');setChoice('energy','normal');els.taskTodayPriority.checked=false;els.taskNonNegotiable.checked=false;populateDependencyOptions();setTaskAdvanced(false);syncCompactTaskMeta();updateCapacityPreview();
 }
@@ -1233,16 +1269,79 @@ function actionOption({icon,title,sub='',end='',attrs='',className=''}){return `
 function showActionSheet(html){els.actionSheetContent.innerHTML=html;openSheet(els.actionSheet);}
 
 function openWhatsNew(){
-  showActionSheet(`${sheetHeader('Novedades','Cambios recientes')}
-    <div class="release-notes">
-      <section><strong>5.0.3</strong><span>Menú del botón + estabilizado en PWA: las opciones se ejecutan al finalizar el toque y ya no se cierran al abrirse.</span></section>
-      <section><strong>5.0.2</strong><span>Accesos del botón + corregidos en pulsación larga · panel de novedades.</span></section>
-      <section><strong>5.0.1</strong><span>Modo oscuro y PWA pulidos · Ajustes y tarjetas con mejor contraste.</span></section>
-      <section><strong>5.0</strong><span>Planning Studio · inteligencia premium · creación de tareas compacta.</span></section>
-      <section><strong>4.2</strong><span>Plan resiliente · predicción personal · backups, perfiles y modo Ahora.</span></section>
+  showActionSheet(`${sheetHeader('Novedades','Organizador 5.0.4')}
+    <div class="release-hero">
+      <span class="release-badge">NUEVO</span>
+      <strong>Más foco. Menos gestión.</strong>
+      <p>La actualización refina cómo planificas el fin de semana y cómo trabajas en Windows, sin añadir ruido al día a día.</p>
     </div>
-    <div class="sheet-actions"><button class="primary-btn" data-close-action>Entendido</button></div>`);
+    <div class="release-feature-grid">
+      <article><span class="release-feature-icon">${ICON('calendar')}</span><div><strong>Semana próxima</strong><small>Los sábados y domingos puedes dejar la siguiente semana preparada desde la PWA de Windows.</small></div></article>
+      <article><span class="release-feature-icon">${ICON('target')}</span><div><strong>Enfoque Trabajo</strong><small>Un horario local puede convertir la PWA en una vista dedicada únicamente al trabajo.</small></div></article>
+      <article><span class="release-feature-icon">${ICON('history')}</span><div><strong>Novedades premium</strong><small>Los cambios recientes ahora se presentan como notas de versión claras y compactas.</small></div></article>
+    </div>
+    <details class="release-history"><summary>Versiones anteriores <span>5.0.3 → 4.2</span></summary>
+      <div class="release-timeline">
+        <div><strong>5.0.3</strong><span>Menú + estabilizado en PWA.</span></div>
+        <div><strong>5.0.2</strong><span>Accesos rápidos y panel de novedades.</span></div>
+        <div><strong>5.0.1</strong><span>Modo oscuro y PWA pulidos.</span></div>
+        <div><strong>5.0</strong><span>Planning Studio y creación compacta.</span></div>
+        <div><strong>4.2</strong><span>Plan resiliente, predicción y backups.</span></div>
+      </div>
+    </details>
+    <div class="sheet-actions"><button class="primary-btn" data-close-action>Listo</button></div>`);
 }
+
+function weekPlanningSelectedDate(){
+  const dates=nextWeekDates(),saved=state.ui.weekendPlanning?.selectedDate;return dates.includes(saved)?saved:dates[0];
+}
+function openWeekendPlanning(){
+  if(!isWindowsPWA()||!isWeekendNow()){toast('Disponible los sábados y domingos en la PWA de Windows.');return;}
+  const dates=nextWeekDates(),selected=weekPlanningSelectedDate();
+  state.ui.weekendPlanning={...(state.ui.weekendPlanning||{}),active:true,selectedDate:selected};saveUI();
+  const total=dates.reduce((sum,d)=>sum+tasksOn(d).length,0);
+  showActionSheet(`${sheetHeader('Fin de semana','Dejar planificada la semana próxima')}
+    <div class="week-plan-summary"><strong>${total} tareas ya colocadas</strong><span>${formatDate(dates[0],true)} — ${formatDate(dates[6],true)}</span></div>
+    <div class="week-plan-days">${dates.map(d=>{const l=getDayLoad(d),sel=d===selected;return `<button class="week-plan-day ${sel?'selected':''} ${l.percent>100?'over':''}" data-week-plan-day="${d}"><span>${new Intl.DateTimeFormat('es-ES',{weekday:'short'}).format(parseISODate(d)).replace('.','')}</span><strong>${parseISODate(d).getDate()}</strong><small>${l.percent}%</small></button>`;}).join('')}</div>
+    <div class="week-plan-selected">Añadirás al <strong>${weekdayName(selected)} ${parseISODate(selected).getDate()}</strong>. Todo lo que crees aquí queda agendado y aparece en Calendario.</div>
+    <div class="action-list week-plan-actions">
+      ${actionOption({icon:'plus',title:'Añadir tarea',sub:'Crear directamente en el día seleccionado.',attrs:'data-week-plan-add'})}
+      ${actionOption({icon:'spark',title:'Distribuir pendientes sin fecha',sub:'Repartir Inbox y tareas sin día según la carga.',attrs:'data-week-plan-distribute'})}
+      ${actionOption({icon:'layout',title:'Abrir Planning Studio',sub:'Revisar toda la semana antes de cerrar.',attrs:'data-week-plan-open-studio'})}
+    </div>
+    <div class="sheet-actions"><button class="ghost-btn" data-week-plan-finish>Terminar planificación</button></div>`);
+}
+function distributeUnscheduledToNextWeek(){
+  const dates=nextWeekDates(),pending=activeTasks().filter(t=>!t.scheduledDate&&!t.nonNegotiableDate).slice(0,40);
+  if(!pending.length){toast('No hay tareas sin fecha que distribuir.');return;}
+  const snapshot=deepClone(state.tasks);
+  for(const task of pending){
+    let best=dates[0],bestPct=Infinity;
+    for(const date of dates){
+      if(state.settings.workFreeWeekend&&task.category==='work'&&isWeekendDate(date))continue;
+      if(task.deadline&&date>task.deadline)continue;
+      const pct=getDayLoad(date,effectiveTaskLoadMinutes(task),task.id).percent;if(pct<bestPct){bestPct=pct;best=date;}
+    }
+    task.scheduledDate=best;task.inbox=false;appendTaskHistory(task,'weekend-planned');
+  }
+  saveAll();render();pushUndo('Semana planificada',snapshot);openWeekendPlanning();toast(`${pending.length} tareas distribuidas.`);
+}
+function openWorkFocusSetup(){
+  if(!isWindowsPWA()){toast('Enfoque está disponible en la PWA de Windows.');return;}
+  const cfg=workFocusConfig(),active=isWorkFocusActive();
+  showActionSheet(`${sheetHeader('Trabajo','Enfoque')}
+    <div class="focus-mode-hero ${active?'active':''}"><span class="focus-mode-mark">${ICON('target')}</span><div><strong>${active?'Enfoque activo':'Un espacio solo para trabajar'}</strong><p>${active?`La PWA muestra únicamente Trabajo hasta las ${escapeHTML(cfg.end)}.`:'Define tu horario. Durante esa franja la PWA cambia automáticamente a una experiencia dedicada a Trabajo.'}</p></div></div>
+    <div class="focus-time-grid"><label><span>Desde</span><input id="workFocusStart" type="time" value="${escapeHTML(cfg.start)}"></label><label><span>Hasta</span><input id="workFocusEnd" type="time" value="${escapeHTML(cfg.end)}"></label></div>
+    <p class="micro-note">Se aplica de lunes a viernes y solo en esta PWA de Windows. Al terminar el horario, la aplicación vuelve a la vista normal.</p>
+    <div class="sheet-actions three">${cfg.enabled?'<button class="ghost-btn" data-focus-disable>Desactivar</button>':''}${active?'<button class="ghost-btn" data-focus-today>Salir hoy</button>':''}<button class="primary-btn" data-focus-save>${cfg.enabled?'Guardar horario':'Activar'}</button></div>`);
+}
+function saveWorkFocusFromSheet(){
+  const start=document.getElementById('workFocusStart')?.value||'09:00',end=document.getElementById('workFocusEnd')?.value||'17:00';
+  if(start===end){toast('El inicio y el final deben ser distintos.');return;}
+  state.ui.workFocus={enabled:true,start,end,overrideDate:''};saveUI();closeActionSheet();render();toast(isWorkFocusActive()?'Enfoque activado.':'Horario de enfoque guardado.');
+}
+function disableWorkFocus(){state.ui.workFocus={...workFocusConfig(),enabled:false,overrideDate:''};saveUI();closeActionSheet();render();toast('Enfoque desactivado.');}
+function exitWorkFocusToday(){state.ui.workFocus={...workFocusConfig(),overrideDate:todayISO()};saveUI();closeActionSheet();render();toast('Enfoque pausado por hoy.');}
 
 function runFabAction(action){
   els.fabMenu.hidden=true;
@@ -1635,7 +1734,7 @@ const DIRECT_COMMAND_SELECTOR = [
   '[data-snooze-choice]','[data-confirm-custom-snooze]','[data-confirm-split]','[data-confirm-space]',
   '[data-set-priority]','[data-set-energy]','[data-move-category]','[data-lower-priority]',
   '[data-postpone-help]','[data-review-date]','[data-day-close]','[data-confirm-reset-app]',
-  '[data-snooze-reason]','[data-day-profile]','[data-recovery-dismiss]','[data-recovery-apply]','[data-stale-task]','[data-stale-keep]','[data-stale-gap]','[data-stale-archive]','[data-inbox-place]','[data-search-open]','[data-palette]','[data-confirm-backup]','[data-disable-lock]','[data-change-lock]','[data-save-pin]','[data-conflict]','[data-smart-list]','[data-trash-restore]','[data-trash-empty]','[data-create-outcome]','[data-procrastination]','[data-task-history]',
+  '[data-snooze-reason]','[data-day-profile]','[data-week-plan-day]','[data-week-plan-add]','[data-week-plan-distribute]','[data-week-plan-open-studio]','[data-week-plan-finish]','[data-focus-save]','[data-focus-disable]','[data-focus-today]','[data-recovery-dismiss]','[data-recovery-apply]','[data-stale-task]','[data-stale-keep]','[data-stale-gap]','[data-stale-archive]','[data-inbox-place]','[data-search-open]','[data-palette]','[data-confirm-backup]','[data-disable-lock]','[data-change-lock]','[data-save-pin]','[data-conflict]','[data-smart-list]','[data-trash-restore]','[data-trash-empty]','[data-create-outcome]','[data-procrastination]','[data-task-history]',
   '.row-more[data-open-task]'
 ].join(',');
 
@@ -1645,6 +1744,14 @@ function runDataCommand(target){
   if(close){closeSheet(document.getElementById(close.dataset.closeSheet));return true;}
   if(target.closest?.('[data-close-action]')){closeActionSheet();return true;}
   if(target.closest?.('[data-close-now]')){closeNowMode();return true;}
+  const weekDay=target.closest?.('[data-week-plan-day]');if(weekDay){state.ui.weekendPlanning={...(state.ui.weekendPlanning||{}),active:true,selectedDate:weekDay.dataset.weekPlanDay};saveUI();openWeekendPlanning();return true;}
+  if(target.closest?.('[data-week-plan-add]')){const date=weekPlanningSelectedDate();closeActionSheet();setTimeout(()=>openTaskSheet({date}),60);return true;}
+  if(target.closest?.('[data-week-plan-distribute]')){distributeUnscheduledToNextWeek();return true;}
+  if(target.closest?.('[data-week-plan-open-studio]')){state.route='planning';closeActionSheet();render();return true;}
+  if(target.closest?.('[data-week-plan-finish]')){state.ui.weekendPlanning={...(state.ui.weekendPlanning||{}),active:false};saveUI();closeActionSheet();render();toast('Semana preparada.');return true;}
+  if(target.closest?.('[data-focus-save]')){saveWorkFocusFromSheet();return true;}
+  if(target.closest?.('[data-focus-disable]')){disableWorkFocus();return true;}
+  if(target.closest?.('[data-focus-today]')){exitWorkFocusToday();return true;}
 
   const action=target.closest?.('[data-action]');
   if(action){
@@ -1882,8 +1989,9 @@ els.taskForm.addEventListener('submit',event=>{
   else {const created=createTask(data);appendTaskHistory(created,'created');state.tasks.push(created);learnCategoryCorrection(created);considerTaskForFocus(created);}
   saveAll();closeSheet(els.taskSheet);render();pushUndo(existing?'Tarea actualizada':'Tarea creada',snapshot);
   const load=data.scheduledDate?getDayLoad(data.scheduledDate):null;toast(load&&load.percent>100?`Ese día queda al ${load.percent}%`:(existing?'Cambios guardados.':'Tarea guardada.'));
+  if(!existing&&isWindowsPWA()&&isWeekendNow()&&state.ui.weekendPlanning?.active)setTimeout(openWeekendPlanning,90);
 });
-els.quickForm.addEventListener('submit',event=>{event.preventDefault();const parsed=parseNaturalTask(els.quickTaskInput.value);if(!parsed.title){toast('Escribe una tarea.');return;}const snapshot=deepClone(state.tasks);const hasStructure=Boolean(parsed.category||parsed.scheduledDate||parsed.scheduledTime||parsed.priority||parsed.energy||parsed.duration||parsed.recurrence||parsed.deadline||parsed.project||parsed.context);const task=createTask({title:parsed.title,category:parsed.category||suggestCategoryForTitle(parsed.title)||(['work','personal','study'].includes(state.route)?state.route:'personal'),priority:parsed.priority||'medium',energy:parsed.energy||'normal',scheduledDate:parsed.scheduledDate||(hasStructure?todayISO():''),scheduledTime:parsed.scheduledTime||'',deadline:parsed.deadline||'',duration:parsed.duration||30,recurrence:parsed.recurrence||'none',flexibleWeeklyCount:parsed.flexibleWeeklyCount||3,project:parsed.project||'',context:parsed.context||'',inbox:!hasStructure,modifiedAt:new Date().toISOString()});appendTaskHistory(task,'created');state.tasks.push(task);learnCategoryCorrection(task);considerTaskForFocus(task);saveAll();closeSheet(els.quickSheet);render();pushUndo('Tarea creada',snapshot);toast(task.inbox?'Guardada en Inbox.':'Entrada rápida creada.');});
+els.quickForm.addEventListener('submit',event=>{event.preventDefault();const parsed=parseNaturalTask(els.quickTaskInput.value);if(!parsed.title){toast('Escribe una tarea.');return;}const snapshot=deepClone(state.tasks);const hasStructure=Boolean(parsed.category||parsed.scheduledDate||parsed.scheduledTime||parsed.priority||parsed.energy||parsed.duration||parsed.recurrence||parsed.deadline||parsed.project||parsed.context);const task=createTask({title:parsed.title,category:parsed.category||suggestCategoryForTitle(parsed.title)||(['work','personal','study'].includes(state.route)?state.route:'personal'),priority:parsed.priority||'medium',energy:parsed.energy||'normal',scheduledDate:parsed.scheduledDate||((isWindowsPWA()&&isWeekendNow()&&state.ui.weekendPlanning?.active)?weekPlanningSelectedDate():(hasStructure?todayISO():'')),scheduledTime:parsed.scheduledTime||'',deadline:parsed.deadline||'',duration:parsed.duration||30,recurrence:parsed.recurrence||'none',flexibleWeeklyCount:parsed.flexibleWeeklyCount||3,project:parsed.project||'',context:parsed.context||'',inbox:!hasStructure,modifiedAt:new Date().toISOString()});appendTaskHistory(task,'created');state.tasks.push(task);learnCategoryCorrection(task);considerTaskForFocus(task);saveAll();closeSheet(els.quickSheet);render();pushUndo('Tarea creada',snapshot);toast(task.inbox?'Guardada en Inbox.':'Entrada rápida creada.');if(isWindowsPWA()&&isWeekendNow()&&state.ui.weekendPlanning?.active)setTimeout(openWeekendPlanning,90);});
 els.reminderForm.addEventListener('submit',event=>{event.preventDefault();const title=els.reminderTitle.value.trim();if(!title)return;const snapshot=deepClone(state.tasks);const reminder=createTask({title,kind:'reminder',category:els.reminderCategory.value,priority:'medium',energy:'low',scheduledDate:els.reminderDate.value,scheduledTime:els.reminderTime.value,deadline:'',duration:5,recurrence:'none'});state.tasks.push(reminder);considerTaskForFocus(reminder);saveAll();closeSheet(els.reminderSheet);render();pushUndo('Recordatorio creado',snapshot);toast('Recordatorio guardado.');});
 
 els.settingsForm.addEventListener('submit',event=>{event.preventDefault();state.settings.name=els.settingsName.value.trim()||'Angel';state.settings.dailyCapacity=Number(els.settingsCapacity.value||450);state.settings.haptics=els.settingsHaptics.checked;state.settings.weekendMode=els.settingsWeekendMode.checked;state.settings.theme=els.settingsTheme.value;state.settings.defaultProfile=els.settingsDefaultProfile.value;state.settings.privacyMode=els.settingsPrivacyMode.checked;state.settings.intelligentMode=els.settingsIntelligentMode?.checked!==false;state.settings.bufferPercent=Number(els.settingsBuffer?.value||15);state.settings.maxHighPerDay=Number(els.settingsMaxHigh?.value||2);state.settings.workFreeWeekend=Boolean(els.settingsWorkFreeWeekend?.checked);state.settings.appearance=els.settingsAppearance?.value||'system';saveAll();closeSheet(els.settingsSheet);render();toast('Ajustes guardados.');});
@@ -1896,6 +2004,8 @@ if(els.quickVoiceBtn)els.quickVoiceBtn.addEventListener('click',()=>startSpeechC
 els.taskTitle.addEventListener('input',()=>{if(!els.taskEditId.value){applyCategorySuggestion();const parsed=parseNaturalTask(els.taskTitle.value);if(parsed.category)els.taskCategory.value=parsed.category;if(parsed.duration){ensureSelectOption(els.taskDuration,parsed.duration);els.taskDuration.value=String(parsed.duration);}if(parsed.scheduledDate)els.taskScheduledDate.value=parsed.scheduledDate;if(parsed.deadline)els.taskDeadline.value=parsed.deadline;if(parsed.priority)setChoice('priority',parsed.priority);if(parsed.energy)setChoice('energy',parsed.energy);if(parsed.recurrence)els.taskRecurrence.value=parsed.recurrence;if(parsed.project&&els.taskProject)els.taskProject.value=parsed.project;if(parsed.context&&els.taskContext)els.taskContext.value=parsed.context;syncCompactTaskMeta();updateCapacityPreview();}});
 els.taskScheduledDate.addEventListener('change',()=>{syncCompactTaskMeta();updateCapacityPreview();});els.taskDuration.addEventListener('change',updateCapacityPreview);
 if(els.planningBalanceBtn)els.planningBalanceBtn.addEventListener('click',applyWeekBalance);
+if(els.weekendPlanBtn)els.weekendPlanBtn.addEventListener('click',openWeekendPlanning);
+if(els.workFocusBtn)els.workFocusBtn.addEventListener('click',openWorkFocusSetup);
 if(els.planningCleanBtn)els.planningCleanBtn.addEventListener('click',()=>{const stale=getStaleTasks().slice(0,8);if(!stale.length){toast('No hay pendientes antiguos que limpiar.');return;}showActionSheet(`${sheetHeader('Limpieza inteligente','Menos deuda de tareas')}<div class="action-list">${stale.map(t=>actionOption({icon:'spark',title:t.title,sub:getProcrastinationStep(t)||'Revisar',attrs:`data-procrastination="split" data-id="${t.id}"`})).join('')}</div>`);});
 if(els.newOutcomeBtn)els.newOutcomeBtn.addEventListener('click',openNewOutcome);
 if(els.openTrashBtn)els.openTrashBtn.addEventListener('click',openTrash);
@@ -1943,7 +2053,13 @@ els.contextIsland.addEventListener('pointerup',()=>{if(islandHold){clearTimeout(
 window.addEventListener('online',()=>{updateSyncUI();if(isCloudConfigured()&&!state.sync.auth){initCloudSync().catch(()=>{});return;}if(state.sync.user){state.sync.forceRetry=true;syncLocalToFirebase().catch(()=>{});setTimeout(()=>pullCloudNow({silent:true}).catch(()=>{}),350);}});
 window.addEventListener('offline',()=>{if(state.sync.user)setSyncStatus('offline','Sin conexión · los cambios quedarán pendientes.');else updateSyncUI();});
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=5.0.3',{updateViaCache:'none'}).then(reg=>reg.update()).catch(error=>console.warn('Service worker:',error)));}
+setInterval(()=>{
+  if(!isWindowsPWA())return;
+  const active=isWorkFocusActive();
+  if(active!==state.workFocusWasActive)render();
+},30000);
+
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=5.0.4',{updateViaCache:'none'}).then(reg=>reg.update()).catch(error=>console.warn('Service worker:',error)));}
 
 function processLaunchAction(){
   const u=new URL(location.href),action=u.searchParams.get('action');if(!action)return;

@@ -10,8 +10,8 @@
   <meta name="apple-mobile-web-app-title" content="Organizador" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="format-detection" content="telephone=no" />
-  <title>Organizador personal inteligente · 5.0.3</title>
-  <link rel="manifest" href="manifest.webmanifest?v=5.0.3" />
+  <title>Organizador personal inteligente · 5.0.4</title>
+  <link rel="manifest" href="manifest.webmanifest?v=5.0.4" />
   <link rel="icon" type="image/x-icon" href="favicon-v313.ico" sizes="any" />
   <link rel="shortcut icon" type="image/x-icon" href="favicon-v313.ico" />
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32-v313.png" />
@@ -20,8 +20,8 @@
   <link rel="apple-touch-icon-precomposed" sizes="180x180" href="icons/apple-touch-icon-v313.png" />
   <meta name="msapplication-TileColor" content="#07121f" />
   <meta name="msapplication-TileImage" content="icons/icon-512-v313.png" />
-  <meta name="msapplication-config" content="browserconfig.xml?v=5.0.3" />
-  <link rel="stylesheet" href="styles.css?v=5.0.3" />
+  <meta name="msapplication-config" content="browserconfig.xml?v=5.0.4" />
+  <link rel="stylesheet" href="styles.css?v=5.0.4" />
 </head>
 <body>
   <!-- Sprite SVG local: iconografía consistente, sin librerías externas. -->
@@ -160,10 +160,13 @@
         <section class="content-card">
           <div class="section-header">
             <div><span class="section-kicker">Área</span><h2 id="categoryTitle">Trabajo</h2></div>
-            <div class="segmented" role="group" aria-label="Filtro de tareas">
-              <button class="segment active" data-task-filter="open">Pendientes</button>
-              <button class="segment" data-task-filter="today">Hoy</button>
-              <button class="segment" data-task-filter="all">Todas</button>
+            <div class="category-controls">
+              <button class="focus-mode-btn" id="workFocusBtn" type="button" hidden><svg><use href="#i-target"/></svg><span>Enfoque</span></button>
+              <div class="segmented" role="group" aria-label="Filtro de tareas">
+                <button class="segment active" data-task-filter="open">Pendientes</button>
+                <button class="segment" data-task-filter="today">Hoy</button>
+                <button class="segment" data-task-filter="all">Todas</button>
+              </div>
             </div>
           </div>
           <div id="categoryTaskList" class="task-list"></div>
@@ -175,7 +178,7 @@
         <section class="planning-studio">
           <div class="planning-hero">
             <div><span class="section-kicker">Planning Studio</span><h2>Tu semana, sin ruido</h2><p id="planningInsight">Equilibra la semana con una sola decisión.</p></div>
-            <div class="planning-actions"><button class="ghost-btn compact" id="planningCleanBtn">Limpiar</button><button class="primary-btn compact" id="planningBalanceBtn">Reequilibrar</button></div>
+            <div class="planning-actions"><button class="weekend-plan-btn compact" id="weekendPlanBtn" hidden><svg><use href="#i-calendar"/></svg><span>Dejar planificada la semana próxima</span></button><button class="ghost-btn compact" id="planningCleanBtn">Limpiar</button><button class="primary-btn compact" id="planningBalanceBtn">Reequilibrar</button></div>
           </div>
           <div class="planning-week" id="planningWeekBoard"></div>
           <div class="planning-grid">
@@ -365,7 +368,7 @@
   <div class="undo-bar" id="undoBar" role="status" aria-live="polite" hidden><span id="undoText">Tarea completada</span><button id="undoBtn">Deshacer</button></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="config.js?v=5.0.3"></script>
-  <script src="app.js?v=5.0.3"></script>
+  <script src="config.js?v=5.0.4"></script>
+  <script src="app.js?v=5.0.4"></script>
 </body>
 </html>

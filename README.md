@@ -1,6 +1,6 @@
-# Organizador personal inteligente · v5.0.3
+# Organizador personal inteligente · v5.0.4
 
-La v5.0.3 mantiene la filosofía de la aplicación sin romper la sincronización existente:
+La v5.0.4 mantiene la filosofía de la aplicación sin romper la sincronización existente:
 
 - **Web / escritorio = Planning Studio** para pensar, equilibrar y revisar la semana.
 - **PWA / móvil = Capturar y hacer** con una interfaz más silenciosa, uso con una mano y acceso directo a la siguiente acción.
@@ -8,10 +8,12 @@ La v5.0.3 mantiene la filosofía de la aplicación sin romper la sincronización
 - La inteligencia principal continúa siendo **local-first**: scoring, estimaciones, agrupación, riesgo y recomendaciones no requieren una API de IA para responder.
 
 
-## Corrección v5.0.3
+## Novedades v5.0.4
 
-- La pulsación larga del botón `+` mantiene los tres accesos y ahora **Entrada rápida, Recordatorio y Nueva tarea responden de forma directa a eventos táctiles** en iOS/PWA, con `click` como respaldo.
-- Se añade un botón **Novedades** en la cabecera, junto a Calendario y Ajustes, con un resumen compacto de los cambios recientes.
+- **Novedades premium**: el historial de cambios se presenta ahora con una tarjeta principal, tres mejoras destacadas y un historial compacto de versiones anteriores.
+- **Planificación de fin de semana en Windows PWA**: los sábados y domingos aparece `Dejar planificada la semana próxima` en Planning Studio. Permite escoger el día de la semana siguiente, crear tareas directamente agendadas y distribuir pendientes sin fecha según la carga. Mientras la sesión está activa, las nuevas tareas quedan planificadas para el día seleccionado salvo que indiques expresamente otra fecha.
+- **Enfoque Trabajo en Windows PWA**: desde el área Trabajo se puede definir un horario local (por defecto 09:00–17:00). De lunes a viernes, durante esa franja la PWA se restringe automáticamente a Trabajo y recupera la interfaz normal al terminar. El horario es local al dispositivo y puede pausarse por el resto del día.
+- Firebase, Firestore y `schemaVersion 5` se mantienen sin cambios destructivos.
 
 ## Captura ultrarrápida
 
@@ -75,7 +77,7 @@ Para una primera instalación nueva, consulta `CONFIGURACION-FIREBASE.md` y publ
 2. Sustituye en GitHub el contenido de la versión anterior por el contenido de este ZIP.
 3. Comprueba que `index.html` queda en la raíz del repositorio.
 4. Espera a que GitHub Pages publique la nueva versión.
-5. Cierra y vuelve a abrir la PWA. El Service Worker usa una caché nueva de v5.0.3.
+5. Cierra y vuelve a abrir la PWA. El Service Worker usa una caché nueva de v5.0.4.
 
 Los datos sincronizados no se borran. Las preferencias puramente locales del dispositivo pueden evolucionar de forma independiente.
 

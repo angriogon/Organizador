@@ -10,8 +10,8 @@
   <meta name="apple-mobile-web-app-title" content="Organizador" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="format-detection" content="telephone=no" />
-  <title>Organizador personal inteligente · 4.2</title>
-  <link rel="manifest" href="manifest.webmanifest?v=4.2.0" />
+  <title>Organizador personal inteligente · 5.0</title>
+  <link rel="manifest" href="manifest.webmanifest?v=5.0.0" />
   <link rel="icon" type="image/x-icon" href="favicon-v313.ico" sizes="any" />
   <link rel="shortcut icon" type="image/x-icon" href="favicon-v313.ico" />
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32-v313.png" />
@@ -20,8 +20,8 @@
   <link rel="apple-touch-icon-precomposed" sizes="180x180" href="icons/apple-touch-icon-v313.png" />
   <meta name="msapplication-TileColor" content="#07121f" />
   <meta name="msapplication-TileImage" content="icons/icon-512-v313.png" />
-  <meta name="msapplication-config" content="browserconfig.xml?v=4.2.0" />
-  <link rel="stylesheet" href="styles.css?v=4.2.0" />
+  <meta name="msapplication-config" content="browserconfig.xml?v=5.0.0" />
+  <link rel="stylesheet" href="styles.css?v=5.0.0" />
 </head>
 <body>
   <!-- Sprite SVG local: iconografía consistente, sin librerías externas. -->
@@ -57,6 +57,14 @@
     <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
     <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 21V9M7 14l5-5 5 5"/><path d="M4 5h16"/></symbol>
     <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M4 5h16l-2 14H6z"/><path d="M4.8 14h4l1.2 2h4l1.2-2h4"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M15 9l5-5"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6h7l2 2h9v11H3z"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.5"/><path d="M4 4v4.5h4.5M12 8v5l3 2"/></symbol>
+    <symbol id="i-layout" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11M15 9v11"/></symbol>
+    <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M9 2h6M12 5v2M12 13l3-2"/></symbol>
+    <symbol id="i-restore" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.5"/><path d="M4 4v4.5h4.5"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5z"/></symbol>
   </svg>
 
   <div class="app-shell">
@@ -64,6 +72,7 @@
       <div class="brand" aria-label="Organizador personal inteligente"><img src="icons/favicon-64-v313.png" alt="" width="42" height="42" /></div>
       <nav class="nav-list">
         <button class="nav-item active" data-route="home"><svg><use href="#i-home"/></svg><span>Inicio</span></button>
+        <button class="nav-item planning-nav" data-route="planning"><svg><use href="#i-layout"/></svg><span>Planificar</span></button>
         <button class="nav-item" data-route="work"><svg><use href="#i-briefcase"/></svg><span>Trabajo</span></button>
         <button class="nav-item" data-route="personal"><svg><use href="#i-heart-home"/></svg><span>Personal</span></button>
         <button class="nav-item" data-route="study"><svg><use href="#i-book"/></svg><span>Estudios</span></button>
@@ -161,6 +170,22 @@
         </section>
       </section>
 
+      <section class="view planning-view" id="planningView" aria-label="Planificación semanal">
+        <section class="planning-studio">
+          <div class="planning-hero">
+            <div><span class="section-kicker">Planning Studio</span><h2>Tu semana, sin ruido</h2><p id="planningInsight">Equilibra la semana con una sola decisión.</p></div>
+            <div class="planning-actions"><button class="ghost-btn compact" id="planningCleanBtn">Limpiar</button><button class="primary-btn compact" id="planningBalanceBtn">Reequilibrar</button></div>
+          </div>
+          <div class="planning-week" id="planningWeekBoard"></div>
+          <div class="planning-grid">
+            <section class="premium-panel"><div class="panel-head"><div><span class="section-kicker">Riesgo</span><h3>Lo que necesita atención</h3></div></div><div id="riskList" class="premium-list"></div></section>
+            <section class="premium-panel"><div class="panel-head"><div><span class="section-kicker">Smart lists</span><h3>Vistas que se crean solas</h3></div></div><div id="smartLists" class="smart-list-grid"></div></section>
+            <section class="premium-panel"><div class="panel-head"><div><span class="section-kicker">Proyectos</span><h3>Resultados en movimiento</h3></div><button class="icon-btn subtle" id="newOutcomeBtn" aria-label="Nuevo resultado"><svg><use href="#i-plus"/></svg></button></div><div id="outcomeList" class="premium-list"></div></section>
+            <section class="premium-panel"><div class="panel-head"><div><span class="section-kicker">Ritmo</span><h3>Una señal útil</h3></div></div><div id="premiumInsight" class="premium-insight"></div><div id="yearHeatmap" class="mini-heatmap" aria-label="Mapa de carga reciente"></div></section>
+          </div>
+        </section>
+      </section>
+
       <section class="view" id="calendarView" aria-label="Calendario">
         <section class="content-card calendar-card">
           <div class="calendar-toolbar">
@@ -207,31 +232,30 @@
   <div class="modal-layer" id="taskSheet" hidden aria-hidden="true">
     <div class="modal-backdrop" data-close-sheet="taskSheet" aria-hidden="true"></div>
     <section class="sheet task-sheet" role="dialog" aria-modal="true" aria-labelledby="taskSheetTitle">
-      <form id="taskForm" class="sheet-body">
+      <form id="taskForm" class="sheet-body compact-task-form">
         <div class="sheet-handle" aria-hidden="true"></div>
-        <div class="sheet-header"><div><span class="section-kicker" id="taskSheetKicker">Nueva tarea</span><h2 id="taskSheetTitle">Añadir sin ruido</h2></div><button type="button" class="icon-btn subtle" data-close-sheet="taskSheet" aria-label="Cerrar"><svg><use href="#i-close"/></svg></button></div>
+        <div class="sheet-header compact-task-header"><div><span class="section-kicker" id="taskSheetKicker">Nueva tarea</span><h2 id="taskSheetTitle">Captura rápida</h2></div><button type="button" class="icon-btn subtle" data-close-sheet="taskSheet" aria-label="Cerrar"><svg><use href="#i-close"/></svg></button></div>
         <input id="taskEditId" type="hidden" />
-        <label class="field"><span>Tarea</span><input id="taskTitle" type="text" placeholder="Qué tienes que hacer" maxlength="140" required autocomplete="off" /></label>
-        <div class="form-grid two">
-          <label class="field"><span>Área</span><select id="taskCategory"><option value="work">Trabajo</option><option value="personal">Vida personal / vivienda</option><option value="study">Estudios</option></select></label>
-          <label class="field"><span>Tiempo</span><select id="taskDuration"><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30" selected>30 min</option><option value="45">45 min</option><option value="60">1 h</option><option value="90">1 h 30 min</option><option value="120">2 h</option></select></label>
+        <div class="quick-task-line"><input id="taskTitle" type="text" placeholder="¿Qué tienes que hacer?" maxlength="140" required autocomplete="off" /><button type="button" class="voice-btn" id="taskVoiceBtn" aria-label="Dictar tarea" title="Dictar"><svg><use href="#i-mic"/></svg></button></div>
+        <div class="quick-meta-row">
+          <label class="mini-select"><span>Área</span><select id="taskCategory"><option value="work">Trabajo</option><option value="personal">Personal</option><option value="study">Estudios</option></select></label>
+          <label class="mini-select"><span>Tiempo</span><select id="taskDuration"><option value="10">10m</option><option value="15">15m</option><option value="20">20m</option><option value="30" selected>30m</option><option value="45">45m</option><option value="60">1h</option><option value="90">1h30</option><option value="120">2h</option></select></label>
+          <button type="button" class="mini-chip" id="taskDateCycle"><span>Cuándo</span><strong>Hoy</strong></button>
+          <button type="button" class="mini-chip" id="taskPriorityCycle"><span>Prioridad</span><strong>Media</strong></button>
         </div>
-        <div class="form-grid two">
-          <label class="field"><span>Agendada</span><input id="taskScheduledDate" type="date" /></label>
-          <label class="field"><span>Hora</span><input id="taskScheduledTime" type="time" /></label>
+        <button type="button" class="advanced-toggle" id="taskAdvancedToggle"><span>Más opciones</span><svg><use href="#i-chevron-right"/></svg></button>
+        <div class="task-advanced" id="taskAdvancedFields" hidden>
+          <div class="form-grid two"><label class="field"><span>Agendada</span><input id="taskScheduledDate" type="date" /></label><label class="field"><span>Hora</span><input id="taskScheduledTime" type="time" /></label></div>
+          <div class="form-grid two"><label class="field"><span>Fecha límite</span><input id="taskDeadline" type="date" /></label><label class="field"><span>Repetir</span><select id="taskRecurrence"><option value="none">No repetir</option><option value="daily">Cada día</option><option value="weekly">Cada semana</option><option value="flex-weekly">Flexible semanal</option><option value="monthly">Cada mes</option></select></label></div>
+          <div class="form-grid two"><label class="field"><span>Proyecto <small>opcional</small></span><input id="taskProject" type="text" maxlength="60" placeholder="Ej. Mudanza" /></label><label class="field"><span>Contexto</span><select id="taskContext"><option value="">Automático</option><option value="focus">Concentración</option><option value="admin">Gestiones</option><option value="home">Casa</option><option value="out">Fuera</option></select></label></div>
+          <div class="form-grid two"><label class="field"><span>Resultado <small>opcional</small></span><input id="taskOutcome" type="text" maxlength="80" placeholder="Qué quieres conseguir" /></label><label class="field"><span>Depende de</span><select id="taskDependsOn"><option value="">Ninguna</option></select></label></div>
+          <div class="choice-block"><span class="choice-title">Prioridad</span><div class="choice-row" data-choice-group="priority"><button type="button" data-value="low">Baja</button><button type="button" data-value="medium" class="selected">Media</button><button type="button" data-value="high"><i class="priority-dot"></i>Alta</button></div><input type="hidden" id="taskPriority" value="medium" /></div>
+          <div class="choice-block"><span class="choice-title">Energía <small>opcional</small></span><div class="choice-row energy-choice" data-choice-group="energy"><button type="button" data-value="low">○ Baja</button><button type="button" data-value="normal" class="selected">◐ Normal</button><button type="button" data-value="high">● Alta</button></div><input type="hidden" id="taskEnergy" value="normal" /></div>
+          <div class="protect-row"><label><input type="checkbox" id="taskTodayPriority" /> <span>Importante hoy</span></label><label><input type="checkbox" id="taskNonNegotiable" /> <span>No mover hoy</span></label></div>
+          <div class="capacity-preview" id="taskCapacityPreview"></div>
+          <button type="button" class="advanced-toggle history-toggle" id="taskHistoryBtn" hidden><svg><use href="#i-history"/></svg><span>Ver historial de la tarea</span></button>
         </div>
-        <div class="form-grid two">
-          <label class="field"><span>Fecha límite</span><input id="taskDeadline" type="date" /></label>
-          <label class="field"><span>Repetir</span><select id="taskRecurrence"><option value="none">No repetir</option><option value="daily">Cada día</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes</option></select></label>
-        </div>
-        <div class="choice-block"><span class="choice-title">Prioridad</span><div class="choice-row" data-choice-group="priority"><button type="button" data-value="low">Baja</button><button type="button" data-value="medium" class="selected">Media</button><button type="button" data-value="high"><i class="priority-dot"></i>Alta</button></div><input type="hidden" id="taskPriority" value="medium" /></div>
-        <div class="choice-block"><span class="choice-title">Energía <small>opcional</small></span><div class="choice-row energy-choice" data-choice-group="energy"><button type="button" data-value="low">○ Baja</button><button type="button" data-value="normal" class="selected">◐ Normal</button><button type="button" data-value="high">● Alta</button></div><input type="hidden" id="taskEnergy" value="normal" /></div>
-        <div class="protect-row">
-          <label><input type="checkbox" id="taskTodayPriority" /> <span>Importante hoy</span></label>
-          <label><input type="checkbox" id="taskNonNegotiable" /> <span>No mover hoy</span></label>
-        </div>
-        <div class="capacity-preview" id="taskCapacityPreview"></div>
-        <div class="sheet-actions"><button type="button" class="ghost-btn" data-close-sheet="taskSheet">Cancelar</button><button type="submit" class="primary-btn">Guardar</button></div>
+        <div class="sheet-actions compact-save-row"><button type="button" class="ghost-btn" data-close-sheet="taskSheet">Cancelar</button><button type="submit" class="primary-btn">Guardar</button></div>
       </form>
     </section>
   </div>
@@ -243,7 +267,7 @@
       <form id="quickForm" class="sheet-body">
         <div class="sheet-handle"></div>
         <div class="sheet-header"><div><span class="section-kicker">Entrada rápida</span><h2>Escribe como piensas</h2></div><button type="button" class="icon-btn subtle" data-close-sheet="quickSheet" aria-label="Cerrar"><svg><use href="#i-close"/></svg></button></div>
-        <label class="field quick-natural"><input id="quickTaskInput" type="text" placeholder="Llamar a Laura mañana 18:00 personal alta 20m" autocomplete="off" /><small>Fecha · hora · área · prioridad · duración</small></label>
+        <label class="field quick-natural"><span class="quick-input-wrap"><input id="quickTaskInput" type="text" placeholder="Llamar a Laura mañana 18:00 personal alta 20m" autocomplete="off" /><button type="button" class="voice-btn" id="quickVoiceBtn" aria-label="Dictar entrada"><svg><use href="#i-mic"/></svg></button></span><small>Fecha · hora · área · prioridad · duración</small></label>
         <div class="sheet-actions"><button type="button" class="ghost-btn" data-close-sheet="quickSheet">Cancelar</button><button type="submit" class="primary-btn"><svg><use href="#i-bolt"/></svg> Crear</button></div>
       </form>
     </section>
@@ -307,9 +331,16 @@
           </div>
           <p class="micro-note">Firebase mantiene las tareas sincronizadas en tiempo real. Primera conexión: crea o inicia la cuenta primero en el dispositivo que ya contiene tus datos reales. La app conserva copia local y Firestore reenvía los cambios cuando vuelve Internet.</p>
         </div>
+        <div class="settings-section premium-settings-section"><span class="section-kicker">Inteligencia</span><h3>Más ayuda, misma calma</h3>
+          <label class="toggle-row"><div><strong>Modo inteligente</strong><span>Activa predicción, riesgo, batching y recomendaciones adaptativas.</span></div><input type="checkbox" id="settingsIntelligentMode" /></label>
+          <div class="form-grid two"><label class="field"><span>Margen automático</span><select id="settingsBuffer"><option value="0">Sin margen</option><option value="10">10%</option><option value="15">15%</option><option value="20">20%</option></select></label><label class="field"><span>Máx. tareas altas/día</span><select id="settingsMaxHigh"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label></div>
+          <label class="toggle-row"><div><strong>Fin de semana sin trabajo</strong><span>Evita proponer trabajo salvo que sea urgente.</span></div><input type="checkbox" id="settingsWorkFreeWeekend" /></label>
+          <label class="field"><span>Apariencia</span><select id="settingsAppearance"><option value="system">Sistema</option><option value="light">Claro</option><option value="dark">Oscuro</option></select></label>
+        </div>
+        <div class="settings-section"><span class="section-kicker">Datos premium</span><h3>Historial y seguridad</h3><div class="connect-grid"><button type="button" class="connect-btn" id="openTrashBtn"><strong>Papelera</strong><span>Recupera tareas eliminadas</span></button><button type="button" class="connect-btn" id="exportCsvBtn"><strong>Exportar CSV</strong><span>Datos legibles fuera de la app</span></button><button type="button" class="connect-btn" id="autoBackupBtn"><strong>Copia rápida</strong><span>Snapshot local versionado</span></button></div></div>
         <div class="settings-section"><span class="section-kicker">Calendarios</span><h3>La agenda da contexto, no manda</h3><div class="connect-grid"><button type="button" class="connect-btn" id="googleSyncBtn"><strong>Google Calendar</strong><span id="googleSyncStatus">Conectar y sincronizar</span></button><button type="button" class="connect-btn" id="appleExportBtn"><strong>Apple Calendar</strong><span>Exportar tareas .ics</span></button><button type="button" class="connect-btn" id="icsImportBtn"><strong>Importar .ics</strong><span>Apple, Google u otro</span></button><input type="file" id="icsFileInput" accept=".ics,text/calendar" hidden /></div></div>
         <div class="settings-section"><span class="section-kicker">Instalación</span><h3>Úsala como una app</h3><button type="button" class="connect-btn install-btn" id="installAppBtn"><strong>Instalar Organizador</strong><span id="installAppStatus">Disponible en PWA compatible</span></button></div>
-        <div class="settings-section"><span class="section-kicker">Seguridad local</span><h3>Privacidad en este dispositivo</h3><button type="button" class="connect-btn" id="localLockBtn"><strong>Bloqueo con PIN</strong><span id="localLockStatus">Desactivado</span></button></div>
+        <div class="settings-section"><span class="section-kicker">Seguridad local</span><h3>Privacidad en este dispositivo</h3><div class="connect-grid"><button type="button" class="connect-btn" id="localLockBtn"><strong>Bloqueo con PIN</strong><span id="localLockStatus">Desactivado</span></button><button type="button" class="connect-btn" id="biometricSetupBtn"><strong>Biometría / dispositivo</strong><span id="biometricStatus">Configurar si está disponible</span></button></div></div>
         <div class="settings-section"><span class="section-kicker">Datos</span><h3>Copia y restauración</h3><div class="connect-grid"><button type="button" class="connect-btn" id="exportBackupBtn"><strong>Exportar copia</strong><span>JSON completo y portable.</span></button><button type="button" class="connect-btn" id="importBackupBtn"><strong>Importar copia</strong><span>Previsualizar antes de mezclar.</span></button><input type="file" id="backupFileInput" accept="application/json,.json" hidden /></div><button type="button" class="connect-btn reset-app-btn" id="resetAppBtn"><strong>Resetear aplicación</strong><span>Borrar tareas, ajustes y memoria de la app.</span></button></div>
         <div class="sheet-actions"><button type="button" class="ghost-btn" data-close-sheet="settingsSheet">Cerrar</button><button type="submit" class="primary-btn">Guardar ajustes</button></div>
       </form>
@@ -329,11 +360,11 @@
   </div>
 
   <div class="privacy-curtain" id="privacyCurtain" hidden><div><svg><use href="#i-lock"/></svg><strong>Organizador protegido</strong></div></div>
-  <div class="local-lock-screen" id="localLockScreen" hidden aria-hidden="true"><div class="lock-card"><svg><use href="#i-lock"/></svg><h2>Organizador bloqueado</h2><p>Introduce tu PIN local.</p><input id="localLockPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••"/><button class="primary-btn" id="localUnlockBtn">Desbloquear</button><small id="localLockError"></small></div></div>
+  <div class="local-lock-screen" id="localLockScreen" hidden aria-hidden="true"><div class="lock-card"><svg><use href="#i-lock"/></svg><h2>Organizador bloqueado</h2><p>Introduce tu PIN local.</p><input id="localLockPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••"/><button class="primary-btn" id="localUnlockBtn">Desbloquear</button><button class="ghost-btn" id="localBiometricBtn" hidden>Usar dispositivo</button><small id="localLockError"></small></div></div>
   <div class="undo-bar" id="undoBar" role="status" aria-live="polite" hidden><span id="undoText">Tarea completada</span><button id="undoBtn">Deshacer</button></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="config.js?v=4.2.0"></script>
-  <script src="app.js?v=4.2.0"></script>
+  <script src="config.js?v=5.0.0"></script>
+  <script src="app.js?v=5.0.0"></script>
 </body>
 </html>

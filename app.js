@@ -5,20 +5,20 @@ const LEGACY_STORAGE_KEY = 'opi_tasks_v1';
 const SETTINGS_KEY = 'opi_settings_v2';
 const EXTERNAL_EVENTS_KEY = 'opi_external_events_v2';
 const UI_KEY = 'opi_ui_v3';
-const CACHE_VERSION = '4.2.0';
+const CACHE_VERSION = '5.0.0';
 const SYNC_META_KEY = 'opi_sync_meta_v41';
 const CLOUD_BACKUP_PREFIX = 'opi_prefirebase_backup_v41_';
-const CLOUD_SCHEMA_VERSION = 3;
-const DATA_SCHEMA_VERSION = 3;
+const CLOUD_SCHEMA_VERSION = 5;
+const DATA_SCHEMA_VERSION = 5;
 const DATA_SCHEMA_KEY = 'opi_schema_version';
-const LEARNING_KEY = 'opi_learning_v42';
-const SECURITY_KEY = 'opi_security_v42';
+const LEARNING_KEY = 'opi_learning_v50';
+const SECURITY_KEY = 'opi_security_v50';
 const FIREBASE_SDK_VERSION = '12.18.0';
 
-const DEFAULT_SETTINGS = { name: 'Angel', dailyCapacity: 450, haptics: true, weekendMode: true, theme: 'neutral', defaultProfile: 'normal', privacyMode: false };
-const DEFAULT_UI = { focus: { date: '', ids: [] }, gestureUses: 0, celebratedDate: '', reminderNotified: {}, tightDayDate: '', dayProfileDate: '', dayProfile: 'normal', activeNowTaskId: '', activeNowStartedAt: '', lastOpenedDate: '', lastOpenedAt: '', recoveryPendingDays: 0, commandKnown: false };
-const DEFAULT_LEARNING = { durationSamples: [], decisions: [], completionHours: {}, lastInsightAt: '' };
-const DEFAULT_SECURITY = { enabled: false, pinHash: '' };
+const DEFAULT_SETTINGS = { name: 'Angel', dailyCapacity: 450, haptics: true, weekendMode: true, theme: 'neutral', defaultProfile: 'normal', privacyMode: false, intelligentMode: true, bufferPercent: 15, maxHighPerDay: 2, workFreeWeekend: false, appearance: 'system' };
+const DEFAULT_UI = { focus: { date: '', ids: [] }, gestureUses: 0, celebratedDate: '', reminderNotified: {}, tightDayDate: '', dayProfileDate: '', dayProfile: 'normal', activeNowTaskId: '', activeNowStartedAt: '', lastOpenedDate: '', lastOpenedAt: '', recoveryPendingDays: 0, commandKnown: false, planningWeekStart: '', smartList: '', advancedTaskOpen: false, onboardingLevel: 0, lastAutoBackupAt: '' };
+const DEFAULT_LEARNING = { durationSamples: [], decisions: [], completionHours: {}, lastInsightAt: '', categoryHints: {}, contextStats: {}, weeklySnapshots: [], pauseReasons: {}, taskTemplates: {}, correctionHints: {}, actualSessions: [] };
+const DEFAULT_SECURITY = { enabled: false, pinHash: '', biometricCredentialId: '' };
 const CATEGORY_LABELS = { work: 'Trabajo', personal: 'Vida personal / vivienda', study: 'Estudios' };
 const CATEGORY_SHORT = { work: 'Trabajo', personal: 'Personal', study: 'Estudios' };
 const PRIORITY_LABELS = { low: 'Baja', medium: 'Media', high: 'Alta' };
@@ -43,6 +43,9 @@ function loadLearning(){ try{return {...DEFAULT_LEARNING,...JSON.parse(localStor
 function saveLearning(){ try{localStorage.setItem(LEARNING_KEY,JSON.stringify(state.learning));}catch(_){} }
 function loadSecurity(){ try{return {...DEFAULT_SECURITY,...JSON.parse(localStorage.getItem(SECURITY_KEY)||'{}')};}catch(_){return {...DEFAULT_SECURITY};} }
 function saveSecurity(){ try{localStorage.setItem(SECURITY_KEY,JSON.stringify(state.security));}catch(_){} }
+function maybePersistDailyBackup(){
+  try{if(typeof state==='undefined'||!state.tasks)return;const key='opi_auto_backup_v50',today=new Date().toISOString().slice(0,10),existing=JSON.parse(localStorage.getItem(key)||'{}');if(existing.date===today)return;localStorage.setItem(key,JSON.stringify({date:today,schemaVersion:DATA_SCHEMA_VERSION,tasks:state.tasks,settings:state.settings}));state.ui.lastAutoBackupAt=new Date().toISOString();}catch(_){}
+}
 function migrateSchema(){
   const current=Number(localStorage.getItem(DATA_SCHEMA_KEY)||1);
   if(current<2){ /* versiones históricas ya se normalizan en loadTasks */ }
@@ -72,6 +75,9 @@ const state = {
   undo: null,
   undoStack: [],
   conflicts: [],
+  simulation: null,
+  planningSelection: new Set(),
+  speech: null,
   installPrompt: null,
   pendingSpaceSuggestions: [],
   suppressClickUntil: 0,
@@ -86,7 +92,7 @@ const state = {
 };
 
 const ids = [
-  'currentDate','pageTitle','capacityRing','homeView','tasksView','calendarView','homeCard','greeting','adaptiveLine','loadEmoji','loadPercent','loadStatus','capacityContext','dayProfileBtn','dayProfileLabel','loadBar','focusHeadingText','focusProgress','topThreeList','startNextBtn','lowEnergyBtn','tightDayBtn','smartRecommendation','miniAgendaText','miniAgendaOpen','gapChips','gestureHint','smartResults','smartResultsTitle','contextGroupSummary','smartTaskList','sequenceStartBtn','categoryTitle','categoryTaskList','categoryEmpty','calendarMonthTitle','calendarGrid','calendarWeekStrip','weekCapacityStrip','dayAgendaTitle','dayAgendaLoad','dayAgendaList','contextIsland','fab','fabMenu','taskSheet','taskForm','taskSheetKicker','taskSheetTitle','taskEditId','taskTitle','taskCategory','taskDuration','taskScheduledDate','taskScheduledTime','taskDeadline','taskRecurrence','taskPriority','taskEnergy','taskTodayPriority','taskNonNegotiable','taskCapacityPreview','quickSheet','quickForm','quickTaskInput','reminderSheet','reminderForm','reminderTitle','reminderDate','reminderTime','reminderCategory','actionSheet','actionSheetContent','settingsSheet','settingsForm','settingsName','settingsCapacity','settingsHaptics','settingsWeekendMode','settingsTheme','settingsDefaultProfile','settingsPrivacyMode','syncIssueBadge','syncStateDot','syncAccountStatus','syncDeviceStatus','syncAuthPanel','syncEmail','syncPassword','syncSignInBtn','syncCreateBtn','syncResetBtn','syncSignedPanel','syncNowBtn','syncSignOutBtn','googleSyncStatus','icsFileInput','installAppBtn','installAppStatus','localLockBtn','localLockStatus','exportBackupBtn','importBackupBtn','backupFileInput','resetAppBtn','nowMode','nowTaskTitle','nowTaskMeta','nowCompleteBtn','nowPauseBtn','nowSnoozeBtn','nowNextBtn','nowMoreBtn','privacyCurtain','localLockScreen','localLockPin','localUnlockBtn','localLockError','undoBar','undoText','undoBtn','toast'
+  'currentDate','pageTitle','capacityRing','homeView','tasksView','calendarView','planningView','planningInsight','planningWeekBoard','riskList','smartLists','outcomeList','premiumInsight','yearHeatmap','planningBalanceBtn','planningCleanBtn','newOutcomeBtn','homeCard','greeting','adaptiveLine','loadEmoji','loadPercent','loadStatus','capacityContext','dayProfileBtn','dayProfileLabel','loadBar','focusHeadingText','focusProgress','topThreeList','startNextBtn','lowEnergyBtn','tightDayBtn','smartRecommendation','miniAgendaText','miniAgendaOpen','gapChips','gestureHint','smartResults','smartResultsTitle','contextGroupSummary','smartTaskList','sequenceStartBtn','categoryTitle','categoryTaskList','categoryEmpty','calendarMonthTitle','calendarGrid','calendarWeekStrip','weekCapacityStrip','dayAgendaTitle','dayAgendaLoad','dayAgendaList','contextIsland','fab','fabMenu','taskSheet','taskForm','taskSheetKicker','taskSheetTitle','taskEditId','taskTitle','taskCategory','taskDuration','taskScheduledDate','taskScheduledTime','taskDeadline','taskRecurrence','taskPriority','taskEnergy','taskTodayPriority','taskNonNegotiable','taskProject','taskOutcome','taskDependsOn','taskContext','taskAdvancedToggle','taskAdvancedFields','taskDateCycle','taskPriorityCycle','taskVoiceBtn','quickVoiceBtn','taskHistoryBtn','taskCapacityPreview','quickSheet','quickForm','quickTaskInput','reminderSheet','reminderForm','reminderTitle','reminderDate','reminderTime','reminderCategory','actionSheet','actionSheetContent','settingsSheet','settingsForm','settingsName','settingsCapacity','settingsHaptics','settingsWeekendMode','settingsTheme','settingsDefaultProfile','settingsPrivacyMode','settingsIntelligentMode','settingsBuffer','settingsMaxHigh','settingsWorkFreeWeekend','settingsAppearance','openTrashBtn','exportCsvBtn','autoBackupBtn','syncIssueBadge','syncStateDot','syncAccountStatus','syncDeviceStatus','syncAuthPanel','syncEmail','syncPassword','syncSignInBtn','syncCreateBtn','syncResetBtn','syncSignedPanel','syncNowBtn','syncSignOutBtn','googleSyncStatus','icsFileInput','installAppBtn','installAppStatus','localLockBtn','localLockStatus','biometricSetupBtn','biometricStatus','localBiometricBtn','exportBackupBtn','importBackupBtn','backupFileInput','resetAppBtn','nowMode','nowTaskTitle','nowTaskMeta','nowCompleteBtn','nowPauseBtn','nowSnoozeBtn','nowNextBtn','nowMoreBtn','privacyCurtain','localLockScreen','localLockPin','localUnlockBtn','localLockError','undoBar','undoText','undoBtn','toast'
 ];
 const els = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
@@ -144,7 +150,7 @@ function normalizeTask(task) {
     deadline: task.deadline || '',
     duration: Math.max(5, Number(task.duration || 30)),
     energy: ['low','normal','high'].includes(task.energy) ? task.energy : 'normal',
-    recurrence: ['none','daily','weekly','monthly'].includes(task.recurrence) ? task.recurrence : 'none',
+    recurrence: ['none','daily','weekly','flex-weekly','monthly'].includes(task.recurrence) ? task.recurrence : 'none',
     snoozeCount: Number(task.snoozeCount || 0),
     postponeAlertedAtCount: Number(task.postponeAlertedAtCount || 0),
     createdAt: task.createdAt || new Date().toISOString(),
@@ -161,6 +167,16 @@ function normalizeTask(task) {
     modifiedAt: task.modifiedAt || task.createdAt || new Date().toISOString(),
     lastDecisionReason: task.lastDecisionReason || '',
     lastDeviceId: task.lastDeviceId || task.deviceId || '',
+    deletedAt: task.deletedAt || null,
+    project: String(task.project || '').trim(),
+    outcome: String(task.outcome || '').trim(),
+    dependsOnId: task.dependsOnId || '',
+    context: ['focus','admin','home','out',''].includes(task.context) ? task.context : '',
+    flexibleWeeklyCount: Math.max(1, Number(task.flexibleWeeklyCount || 3)),
+    history: Array.isArray(task.history) ? task.history.slice(-20) : [],
+    sessions: Array.isArray(task.sessions) ? task.sessions.slice(-30) : [],
+    pausedAt: task.pausedAt || '',
+    restoredAt: task.restoredAt || '',
     subtasks: Array.isArray(task.subtasks) ? task.subtasks.map(s => ({ id: s.id || uid(), title: String(s.title || '').trim(), completedAt: s.completedAt || null })).filter(s => s.title) : []
   };
 }
@@ -175,6 +191,7 @@ function saveAll({ skipSync = false } = {}) {
   localStorage.setItem(DATA_SCHEMA_KEY, String(DATA_SCHEMA_VERSION));
   saveLearning();
   saveSecurity();
+  maybePersistDailyBackup();
   if (!skipSync && !state.sync.applyingRemote) scheduleCloudPush();
 }
 function saveUI() { localStorage.setItem(UI_KEY, JSON.stringify(state.ui)); }
@@ -205,7 +222,7 @@ function formatDate(iso, long = false) {
 function weekdayName(iso) { return new Intl.DateTimeFormat('es-ES',{weekday:'long'}).format(parseISODate(iso)).replace(/^./,c=>c.toUpperCase()); }
 function dayDistance(iso) { if (!iso) return Infinity; return Math.round((parseISODate(iso)-parseISODate(todayISO()))/86400000); }
 function isOverdueDeadline(task) { return Boolean(task.deadline && task.deadline < todayISO()); }
-function activeTasks() { return state.tasks.filter(t => !t.completedAt && !t.archivedAt); }
+function activeTasks() { return state.tasks.filter(t => !t.completedAt && !t.archivedAt && !t.deletedAt); }
 function tasksOn(date) { return activeTasks().filter(t => t.scheduledDate === date); }
 function completedToday() { return state.tasks.filter(t => t.completedAt && toISO(new Date(t.completedAt)) === todayISO()); }
 function parseTimeMinutes(time) { if (!time || !/^\d{2}:\d{2}$/.test(time)) return null; const [h,m]=time.split(':').map(Number); return h*60+m; }
@@ -233,6 +250,8 @@ function getDayCapacity(date) {
   base*=profileMultiplier(date);
   if(state.ui.tightDayDate===date)base*=.65;
   if(state.settings.weekendMode&&isWeekendDate(date))base*=.88;
+  const buffer=Math.max(0,Math.min(35,Number(state.settings.bufferPercent||0)))/100;
+  if(state.settings.intelligentMode)base*=1-buffer;
   return Math.max(45,Math.round(base));
 }
 function getDurationRatio(category){
@@ -263,9 +282,15 @@ function loadStatus(percent) {
   return {label:'Sobrecargado',short:'Sobrecargado',emoji:'🫠',level:'over'};
 }
 
+function isTaskBlocked(task){
+  if(!task?.dependsOnId)return false;
+  const dep=state.tasks.find(t=>t.id===task.dependsOnId);
+  return Boolean(dep && !dep.completedAt && !dep.deletedAt && !dep.archivedAt);
+}
 function taskScore(task) {
-  let score = {high:42,medium:22,low:7}[task.priority];
+  let score = {high:42,medium:22,low:7}[task.priority] || 0;
   const today=todayISO(),hour=new Date().getHours();
+  if(isTaskBlocked(task))score-=250;
   if(task.todayPriorityUntil===today)score+=55;
   if(task.nonNegotiableDate===today)score+=70;
   if(task.inbox)score-=18;
@@ -279,15 +304,17 @@ function taskScore(task) {
   const success=(state.learning.completionHours||{})[task.category];
   if(Array.isArray(success)&&success.length>=3){const avg=success.slice(-12).reduce((a,b)=>a+b,0)/Math.min(12,success.length);if(Math.abs(hour-avg)<=2)score+=8;}
   if(state.settings.weekendMode&&isWeekendDate(today)){if(task.category==='personal')score+=14;if(task.category==='work')score-=12;}
+  if(state.settings.workFreeWeekend&&isWeekendDate(today)&&task.category==='work'&&!task.deadline)score-=55;
   if(state.lowEnergyMode){if(task.energy==='low')score+=24;else if(task.energy==='high')score-=22;}
   if(task.lastDecisionReason==='energy'&&hour>=19)score-=10;
+  const preferred=contextFromTask(task); if(preferred==='focus'&&hour>=8&&hour<=12)score+=5;
   return score;
 }
 function getTopCandidates() { return activeTasks().filter(t=>!t.inbox).slice().sort((a,b)=>taskScore(b)-taskScore(a)||(a.deadline||'9999').localeCompare(b.deadline||'9999')); }
 function ensureDailyFocus() {
   const today = todayISO();
   if (state.ui.focus.date !== today) state.ui.focus = { date: today, ids: getTopCandidates().slice(0,3).map(t=>t.id) };
-  state.ui.focus.ids = state.ui.focus.ids.filter(id => state.tasks.some(t=>t.id===id && !t.archivedAt));
+  state.ui.focus.ids = state.ui.focus.ids.filter(id => state.tasks.some(t=>t.id===id && !t.archivedAt && !t.deletedAt));
   const currentSet = new Set(state.ui.focus.ids);
   for (const task of getTopCandidates()) {
     if (state.ui.focus.ids.length >= 3) break;
@@ -297,7 +324,7 @@ function ensureDailyFocus() {
 }
 function getFocusTasks() { ensureDailyFocus(); return state.ui.focus.ids.map(id=>state.tasks.find(t=>t.id===id)).filter(Boolean); }
 function considerTaskForFocus(task) {
-  if(!task||task.archivedAt||task.completedAt||task.inbox)return;
+  if(!task||task.archivedAt||task.deletedAt||task.completedAt||task.inbox||isTaskBlocked(task))return;
   ensureDailyFocus();
   if(state.ui.focus.ids.includes(task.id))return;
   const focus=getFocusTasks();
@@ -370,7 +397,7 @@ function getUsableGaps(date) {
   return getFreeGaps(date).map(g=>({...g,duration:Math.min(g.duration,remaining)})).filter(g=>g.duration>=15);
 }
 function getAgendaItems(date) {
-  const tasks=state.tasks.filter(t=>!t.archivedAt && t.scheduledDate===date && t.scheduledTime).map(t=>({id:t.id,type:'task',title:t.title,category:t.category,time:t.scheduledTime,minutes:parseTimeMinutes(t.scheduledTime),completed:Boolean(t.completedAt),kind:t.kind}));
+  const tasks=state.tasks.filter(t=>!t.archivedAt && !t.deletedAt && t.scheduledDate===date && t.scheduledTime).map(t=>({id:t.id,type:'task',title:t.title,category:t.category,time:t.scheduledTime,minutes:parseTimeMinutes(t.scheduledTime),completed:Boolean(t.completedAt),kind:t.kind}));
   const events=state.externalEvents.filter(e=>e.date===date).map(e=>{ const m=externalStartMinutes(e); return {id:e.id,type:'external',title:e.title,category:'external',time:m===null?'Todo el día':minutesToTime(m),minutes:m===null?9999:m,completed:false}; });
   return [...tasks,...events].sort((a,b)=>a.minutes-b.minutes||a.title.localeCompare(b.title));
 }
@@ -382,8 +409,8 @@ function getMiniAgendaText() {
   return upcoming.map(i=>`${i.time} ${i.title}`).join(' · ');
 }
 function getNextBestAction() {
-  let candidates=getFocusTasks().filter(t=>!t.completedAt&&!t.archivedAt&&!t.inbox);
-  if(!candidates.length)candidates=getTopCandidates().filter(t=>!t.inbox).slice(0,10);
+  let candidates=getFocusTasks().filter(t=>!t.completedAt&&!t.archivedAt&&!t.deletedAt&&!t.inbox&&!isTaskBlocked(t));
+  if(!candidates.length)candidates=getTopCandidates().filter(t=>!t.inbox&&!isTaskBlocked(t)).slice(0,10);
   const gap=getUsableGaps(todayISO())[0],available=gap?.duration||Math.max(15,getDayCapacity(todayISO())-getDayLoad(todayISO()).mental);
   const nowMinutes=new Date().getHours()*60+new Date().getMinutes();
   return candidates.slice().sort((a,b)=>{
@@ -426,6 +453,110 @@ function getRecommendation() {
 }
 
 
+
+/* --------------------------------------------------------------------------
+   v5.0 · capa premium local-first
+   Inteligencia heurística local, Planning Studio, riesgo, papelera, voz y
+   aprendizaje personal. Nada de esto bloquea las acciones básicas ni requiere IA.
+---------------------------------------------------------------------------- */
+function appendTaskHistory(task,type,before=null){
+  if(!task)return;task.history=[...(task.history||[]),{type,at:new Date().toISOString(),deviceId:state.sync?.deviceId||'',before:before?{title:before.title,scheduledDate:before.scheduledDate,priority:before.priority,category:before.category}:undefined}].slice(-20);
+}
+function findFlexibleRecurrenceDate(task,base){
+  const start=addDays(base,1);let best=start,bestLoad=Infinity;
+  for(let i=0;i<7;i++){const date=addDays(start,i);if(state.settings.workFreeWeekend&&task.category==='work'&&isWeekendDate(date))continue;const l=getDayLoad(date,effectiveTaskLoadMinutes(task),task.id);if(l.percent<bestLoad){bestLoad=l.percent;best=date;}if(l.percent<=72)break;}
+  return best;
+}
+function getTaskRisk(task){
+  if(!task||task.completedAt||task.deletedAt||task.archivedAt)return {level:'none',score:0,label:'Sin riesgo'};
+  let score=0;const dur=predictedDuration(task);
+  if(task.deadline){const days=dayDistance(task.deadline);if(days<0)score+=100;else if(days===0)score+=75;else if(days===1)score+=48;else if(days<=3)score+=28;const capacity=Array.from({length:Math.max(1,Math.min(7,days+1))},(_,i)=>Math.max(0,getDayCapacity(addDays(todayISO(),i))-getDayLoad(addDays(todayISO(),i)).mental)).reduce((a,b)=>a+b,0);if(capacity<dur)score+=38;}
+  score+=Math.min(35,task.snoozeCount*7);if(isTaskBlocked(task))score+=38;if(task.energy==='high')score+=6;
+  return score>=80?{level:'high',score,label:'En riesgo'}:score>=45?{level:'medium',score,label:'Va justo'}:{level:'low',score,label:'Con margen'};
+}
+function getPersonalBufferInsight(){
+  const samples=(state.learning.durationSamples||[]).slice(-30);if(samples.length<4)return null;
+  const est=samples.reduce((a,b)=>a+Number(b.estimated||0),0),actual=samples.reduce((a,b)=>a+Number(b.actual||0),0);if(!est)return null;
+  const diff=Math.round((actual/est-1)*100);return diff>8?`Tus tareas suelen necesitar ~${diff}% más tiempo del previsto.`:diff<-10?`Sueles terminar ~${Math.abs(diff)}% antes de lo previsto.`:'Tus estimaciones están bastante afinadas.';
+}
+function getContextSwitchScore(date=todayISO()){
+  const list=tasksOn(date).filter(t=>!t.completedAt).sort((a,b)=>(a.scheduledTime||'99:99').localeCompare(b.scheduledTime||'99:99'));let changes=0,prev='';for(const t of list){const c=contextFromTask(t);if(prev&&c!==prev)changes++;prev=c;}return changes;
+}
+function getBurnoutSignal(){
+  const loads=Array.from({length:5},(_,i)=>getDayLoad(addDays(todayISO(),i)).percent);const hard=loads.filter(x=>x>95).length;return hard>=4?{level:'high',text:'Demasiados días exigentes seguidos. Conviene quitar, no recolocar.'}:hard>=3?{level:'medium',text:'La semana va muy justa. Deja más margen.'}:null;
+}
+function learnCategoryCorrection(task){
+  if(!task?.title)return;const tokens=task.title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').split(/\W+/).filter(x=>x.length>=4).slice(0,5);state.learning.categoryHints=state.learning.categoryHints||{};for(const token of tokens){const row=state.learning.categoryHints[token]||{work:0,personal:0,study:0};row[task.category]=(row[task.category]||0)+1;state.learning.categoryHints[token]=row;}saveLearning();
+}
+function suggestCategoryForTitle(title){
+  const hints=state.learning.categoryHints||{},scores={work:0,personal:0,study:0};for(const token of String(title||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').split(/\W+/)){const row=hints[token];if(row)for(const k of Object.keys(scores))scores[k]+=Number(row[k]||0);}
+  const best=Object.entries(scores).sort((a,b)=>b[1]-a[1])[0];return best&&best[1]>=2?best[0]:null;
+}
+function applyCategorySuggestion(){
+  if(!els.taskTitle||els.taskEditId?.value)return;const suggested=suggestCategoryForTitle(els.taskTitle.value);if(suggested&&els.taskCategory.value!==suggested){els.taskCategory.value=suggested;els.taskCategory.dataset.suggested='1';}
+}
+function getPlanningWeekStart(){
+  const base=state.ui.planningWeekStart||todayISO(),d=parseISODate(base),offset=(d.getDay()+6)%7;return addDays(base,-offset);
+}
+function getWeekDates(start=getPlanningWeekStart()){return Array.from({length:7},(_,i)=>addDays(start,i));}
+function getWeekBalancePlan(){
+  const dates=getWeekDates(),moves=[];const virtual=new Map(dates.map(d=>[d,getDayLoad(d).mental]));const caps=new Map(dates.map(d=>[d,getDayCapacity(d)]));
+  for(const date of dates){let pct=Math.round((virtual.get(date)/caps.get(date))*100);if(pct<=90)continue;const candidates=tasksOn(date).filter(t=>!t.nonNegotiableDate&&!t.completedAt&&!isTaskBlocked(t)&&!(t.deadline&&t.deadline<=date)).sort((a,b)=>movableScore(a,date)-movableScore(b,date));for(const task of candidates){if(pct<=85)break;let target=null,best=999;for(const d of dates){if(d<=date)continue;if(task.deadline&&d>task.deadline)continue;if(state.settings.workFreeWeekend&&task.category==='work'&&isWeekendDate(d))continue;const n=virtual.get(d)+effectiveTaskLoadMinutes(task),p=Math.round(n/caps.get(d)*100);if(p<best&&p<=88){best=p;target=d;}}if(target){virtual.set(date,Math.max(0,virtual.get(date)-effectiveTaskLoadMinutes(task)));virtual.set(target,virtual.get(target)+effectiveTaskLoadMinutes(task));moves.push({id:task.id,from:date,to:target});pct=Math.round(virtual.get(date)/caps.get(date)*100);}}
+  }
+  return moves;
+}
+function applyWeekBalance(){const moves=getWeekBalancePlan();if(!moves.length){toast('La semana ya está razonablemente equilibrada.');return;}mutateWithUndo('Semana reequilibrada',()=>{for(const m of moves){const t=state.tasks.find(x=>x.id===m.id);if(t){appendTaskHistory(t,'rebalanced');t.scheduledDate=m.to;t.snoozeCount+=1;t.lastDecisionReason='capacity';}}});renderPlanning();toast(`${moves.length} ${moves.length===1?'tarea movida':'tareas movidas'} con margen.`);}
+function getSmartLists(){
+  const all=activeTasks();return [
+    {key:'short',label:'Cortas',count:all.filter(t=>predictedDuration(t)<=15).length,filter:t=>predictedDuration(t)<=15},
+    {key:'deep',label:'Concentración',count:all.filter(t=>contextFromTask(t)==='focus').length,filter:t=>contextFromTask(t)==='focus'},
+    {key:'risk',label:'En riesgo',count:all.filter(t=>getTaskRisk(t).level==='high').length,filter:t=>getTaskRisk(t).level==='high'},
+    {key:'snoozed',label:'Aplazadas',count:all.filter(t=>t.snoozeCount>=3).length,filter:t=>t.snoozeCount>=3},
+    {key:'blocked',label:'Bloqueadas',count:all.filter(isTaskBlocked).length,filter:isTaskBlocked},
+    {key:'inbox',label:'Inbox',count:all.filter(t=>t.inbox).length,filter:t=>t.inbox}
+  ];
+}
+function renderPlanning(){
+  if(state.route!=='planning'||!els.planningView)return;const dates=getWeekDates(),plan=getWeekBalancePlan(),burnout=getBurnoutSignal();
+  els.planningInsight.textContent=burnout?.text||plan.length?`${plan.length} ${plan.length===1?'movimiento puede':'movimientos pueden'} equilibrar tu semana.`:(getPersonalBufferInsight()||'Tu semana tiene margen razonable.');
+  els.planningWeekBoard.innerHTML=dates.map(date=>{const l=getDayLoad(date),tasks=tasksOn(date).filter(t=>!t.completedAt);return `<article class="plan-day ${l.percent>100?'over':''}" data-plan-date="${date}"><header><span>${new Intl.DateTimeFormat('es-ES',{weekday:'short'}).format(parseISODate(date)).replace('.','')}</span><strong>${parseISODate(date).getDate()}</strong><em>${l.percent}%</em></header><div class="plan-load"><i style="width:${Math.min(100,l.percent)}%"></i></div><div class="plan-items">${tasks.slice(0,4).map(t=>`<button data-open-task="${t.id}" title="${escapeHTML(t.title)}"><span>${escapeHTML(t.title)}</span><small>${formatMinutes(predictedDuration(t))}</small></button>`).join('')}${tasks.length>4?`<small>+${tasks.length-4}</small>`:''}</div></article>`;}).join('');
+  const risk=activeTasks().map(t=>({t,r:getTaskRisk(t)})).filter(x=>x.r.level==='high'||x.r.level==='medium').sort((a,b)=>b.r.score-a.r.score).slice(0,5);els.riskList.innerHTML=risk.length?risk.map(({t,r})=>`<button class="premium-row" data-open-task="${t.id}"><span><strong>${escapeHTML(t.title)}</strong><small>${r.label}${t.deadline?` · ${formatDate(t.deadline)}`:''}</small></span><em>${r.level==='high'?'!':'·'}</em></button>`).join(''):'<div class="premium-empty">Nada en riesgo ahora mismo.</div>';
+  els.smartLists.innerHTML=getSmartLists().map(x=>`<button data-smart-list="${x.key}"><strong>${x.count}</strong><span>${x.label}</span></button>`).join('');
+  const projects=new Map();for(const t of activeTasks().filter(t=>t.project||t.outcome)){const key=t.project||t.outcome,row=projects.get(key)||{name:key,total:0,done:0,minutes:0};row.total++;row.minutes+=predictedDuration(t);projects.set(key,row);}els.outcomeList.innerHTML=projects.size?[...projects.values()].slice(0,6).map(p=>`<div class="premium-row static"><span><strong>${escapeHTML(p.name)}</strong><small>${p.total} tareas · ${formatMinutes(p.minutes)}</small></span><em>${p.total}</em></div>`).join(''):'<div class="premium-empty">Añade un proyecto a una tarea cuando necesites agrupar un resultado.</div>';
+  const switches=getContextSwitchScore();const insight=getPersonalBufferInsight()||`${switches} cambios de contexto previstos hoy.`;els.premiumInsight.innerHTML=`<strong>${escapeHTML(insight)}</strong><span>${burnout?.text?'Prioriza descanso y no añadas más carga.':'La app usa esto para ordenar, no para juzgar.'}</span>`;
+  const heat=Array.from({length:28},(_,i)=>{const d=addDays(todayISO(),i-27),p=getDayLoad(d).percent;return `<i title="${d} · ${p}%" style="--heat:${Math.min(1,p/120)}"></i>`;}).join('');els.yearHeatmap.innerHTML=heat;
+}
+function openSmartList(key){const def=getSmartLists().find(x=>x.key===key);if(!def)return;const tasks=activeTasks().filter(def.filter).sort((a,b)=>taskScore(b)-taskScore(a));showActionSheet(`${sheetHeader('Smart list',def.label)}<div class="task-list">${tasks.map(renderTaskItem).join('')||'<div class="premium-empty">Nada aquí.</div>'}</div>`);}
+function openTrash(){const items=state.tasks.filter(t=>t.deletedAt).sort((a,b)=>String(b.deletedAt).localeCompare(String(a.deletedAt)));showActionSheet(`${sheetHeader('Papelera',items.length?'Puedes recuperar lo que necesites':'Está vacía')}<div class="action-list">${items.slice(0,30).map(t=>actionOption({icon:'restore',title:t.title,sub:formatDate((t.deletedAt||'').slice(0,10),true),attrs:`data-trash-restore="${t.id}"` })).join('')||'<div class="premium-empty">No hay tareas eliminadas.</div>'}</div>${items.length?'<div class="sheet-actions"><button class="ghost-btn" data-close-action>Cerrar</button><button class="danger-btn" data-trash-empty>Vaciar papelera</button></div>':''}`);}
+function restoreTrashTask(id){const t=state.tasks.find(x=>x.id===id);if(!t)return;mutateWithUndo('Tarea restaurada',()=>{t.deletedAt=null;t.restoredAt=new Date().toISOString();appendTaskHistory(t,'restored');});openTrash();}
+function emptyTrash(){const before=deepClone(state.tasks);state.tasks=state.tasks.filter(t=>!t.deletedAt);saveAll();render();pushUndo('Papelera vaciada',before);closeActionSheet();}
+function downloadText(filename,text,type='text/plain;charset=utf-8'){const blob=new Blob([text],{type}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();const url=a.href;a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);}
+function exportCSV(){const rows=[['title','category','scheduledDate','deadline','duration','priority','energy','project','completedAt']];for(const t of state.tasks.filter(t=>!t.deletedAt))rows.push([t.title,t.category,t.scheduledDate,t.deadline,t.duration,t.priority,t.energy,t.project,t.completedAt||'']);const csv=rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');downloadText(`organizador-${todayISO()}.csv`,csv,'text/csv;charset=utf-8');toast('CSV exportado.');}
+function makeAutoBackup(){exportBackup();state.ui.lastAutoBackupAt=new Date().toISOString();saveUI();}
+function getWeeklyPerformanceSentence(){
+  const dates=Array.from({length:7},(_,i)=>addDays(todayISO(),-i)),planned=dates.reduce((s,d)=>s+state.tasks.filter(t=>!t.deletedAt&&t.scheduledDate===d).reduce((a,t)=>a+Number(t.duration||0),0),0),done=dates.reduce((s,d)=>s+state.tasks.filter(t=>t.completedAt&&toISO(new Date(t.completedAt))===d).reduce((a,t)=>a+Number(t.actualDuration||t.duration||0),0),0);if(!planned)return 'Aún no hay suficiente semana para comparar.';const diff=Math.round((planned-done)/planned*100);return diff>15?`Esta semana planificaste ~${diff}% más de lo que terminó entrando.`:'Tu carga semanal está bastante cerca de la realidad.';
+}
+function getProcrastinationStep(task){const age=Math.max(0,-dayDistance((task.createdAt||'').slice(0,10)));if(task.snoozeCount>=4||age>=20)return task.duration>=60?'Reducirla a una primera acción de 10 min.':task.lastDecisionReason==='blocked'?'Aclara qué falta para desbloquearla.':'Ponle un hueco real o deja de tratarla como obligación.';return '';}
+function proposeTinyFirstStep(task){if(!task)return;const templates={work:['Abrir material y definir siguiente paso','Hacer un borrador mínimo','Revisar y cerrar'],study:['Preparar material','Estudiar el primer bloque','Repasar lo esencial'],personal:['Preparar lo necesario','Hacer la primera gestión','Cerrar y guardar']};mutateWithUndo('Tarea dividida',()=>{task.subtasks=(templates[task.category]||templates.personal).map(title=>({id:uid(),title,completedAt:null}));appendTaskHistory(task,'auto-split');});}
+function recordPauseReason(task,reason){state.learning.pauseReasons=state.learning.pauseReasons||{};state.learning.pauseReasons[task.id]=[...(state.learning.pauseReasons[task.id]||[]),{reason,at:new Date().toISOString()}].slice(-10);saveLearning();}
+function compactTaskBatch(tasks){const groups=new Map();for(const t of tasks){const key=contextLabelForTask(t),g=groups.get(key)||{label:key,tasks:[],minutes:0};g.tasks.push(t);g.minutes+=predictedDuration(t);groups.set(key,g);}return [...groups.values()].sort((a,b)=>b.tasks.length-a.tasks.length);}
+function openNewOutcome(){showActionSheet(`${sheetHeader('Nuevo resultado','Agrupa sin crear complejidad')}<label class="field"><span>Nombre</span><input id="newOutcomeName" placeholder="Ej. Preparar mudanza"></label><div class="sheet-actions"><button class="ghost-btn" data-close-action>Cancelar</button><button class="primary-btn" data-create-outcome>Crear</button></div>`);}
+function createOutcomeFromSheet(){const name=document.getElementById('newOutcomeName')?.value.trim();if(!name)return;closeActionSheet();setTimeout(()=>{openTaskSheet();els.taskProject.value=name;setTaskAdvanced(true);},40);}
+function startSpeechCapture(target){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){toast('El dictado web no está disponible en este navegador. Usa el micrófono del teclado.');target?.focus();return;}
+  try{const rec=new SR();rec.lang='es-ES';rec.interimResults=false;rec.maxAlternatives=1;state.speech=rec;target?.closest('.quick-task-line,.quick-input-wrap')?.classList.add('listening');rec.onresult=e=>{const text=e.results?.[0]?.[0]?.transcript||'';if(text){target.value=(target.value?target.value+' ':'')+text;target.dispatchEvent(new Event('input',{bubbles:true}));}};rec.onend=()=>{target?.closest('.quick-task-line,.quick-input-wrap')?.classList.remove('listening');state.speech=null;};rec.onerror=()=>{target?.closest('.quick-task-line,.quick-input-wrap')?.classList.remove('listening');state.speech=null;};rec.start();}catch(_){toast('No se pudo iniciar el dictado.');}
+}
+function processShareTarget(){const u=new URL(location.href),text=[u.searchParams.get('title'),u.searchParams.get('text'),u.searchParams.get('url')].filter(Boolean).join(' ').trim();if(!text)return;history.replaceState({},'',location.pathname+location.hash);setTimeout(()=>{openQuickSheet();els.quickTaskInput.value=text;},400);}
+function applyAppearance(){const mode=state.settings.appearance||'system',dark=mode==='dark'||(mode==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.appearance=dark?'dark':'light';}
+function cycleCompactDate(){const t=todayISO(),m=addDays(t,1),cur=els.taskScheduledDate.value;els.taskScheduledDate.value=cur===t?m:cur===m?'':t;syncCompactTaskMeta();updateCapacityPreview();}
+function cycleCompactPriority(){const order=['medium','high','low'],i=order.indexOf(els.taskPriority.value);setChoice('priority',order[(i+1)%order.length]);}
+function getSuggestedCategoryFromText(){const parsed=parseNaturalTask(els.taskTitle.value);return parsed.category||suggestCategoryForTitle(els.taskTitle.value);}
+function cleanupOldTrash(){const cutoff=Date.now()-30*86400000;const before=state.tasks.length;state.tasks=state.tasks.filter(t=>!t.deletedAt||new Date(t.deletedAt).getTime()>cutoff);if(state.tasks.length!==before)saveAll();}
+function createWeeklySnapshot(){const key=new Date().toISOString().slice(0,10),list=state.learning.weeklySnapshots||[];if(list.at(-1)?.date===key)return;list.push({date:key,planned:Array.from({length:7},(_,i)=>getDayLoad(addDays(todayISO(),i)).percent),active:activeTasks().length});state.learning.weeklySnapshots=list.slice(-26);saveLearning();}
+function openTaskHistory(id){const t=state.tasks.find(x=>x.id===id);if(!t)return;const rows=(t.history||[]).slice().reverse();showActionSheet(`${sheetHeader('Historial',t.title)}<div class="history-list">${rows.map(h=>`<div><strong>${escapeHTML(({created:'Creada',edited:'Editada',completed:'Completada',deleted:'Papelera',restored:'Restaurada',paused:'Pausada','auto-split':'Dividida','rebalanced':'Reequilibrada'})[h.type]||h.type)}</strong><span>${new Intl.DateTimeFormat('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(h.at))}</span></div>`).join('')||'<div class="premium-empty">Sin historial todavía.</div>'}</div>`);}
+function showProcrastinationWizard(id){const t=state.tasks.find(x=>x.id===id);if(!t)return;showActionSheet(`${sheetHeader('Desbloquear',t.title)}<div class="action-summary">${escapeHTML(getProcrastinationStep(t)||'Elige lo que más se parece a lo que ocurre.')}</div><div class="action-list">${actionOption({icon:'split',title:'Demasiado grande',sub:'Crear una primera acción mínima.',attrs:`data-procrastination="split" data-id="${id}"`})}${actionOption({icon:'spark',title:'Poco claro',sub:'Convertirla en un siguiente paso.',attrs:`data-procrastination="clarify" data-id="${id}"`})}${actionOption({icon:'bolt',title:'Sin energía',sub:'Buscar otro hueco mejor.',attrs:`data-procrastination="energy" data-id="${id}"`})}</div>`);}
+function handleProcrastination(id,type){const t=state.tasks.find(x=>x.id===id);if(!t)return;if(type==='split'){proposeTinyFirstStep(t);closeActionSheet();}else if(type==='clarify'){mutateWithUndo('Tarea aclarada',()=>{if(!/^Siguiente:/.test(t.title))t.title=`Siguiente: ${t.title}`;t.duration=Math.min(15,t.duration);appendTaskHistory(t,'edited');});closeActionSheet();}else{recordPauseReason(t,'energy');applySnooze(id,findNextGap(t));}}
+function mergeConflictFields(local,remote){const merged=normalizeTask({...remote});const ltime=new Date(local.modifiedAt||0).getTime(),rtime=new Date(remote.modifiedAt||0).getTime();if(ltime>=rtime){for(const key of ['title','priority','energy','project','outcome','context'])if(local[key]!==undefined)merged[key]=local[key];}merged.history=[...(remote.history||[]),...(local.history||[])].sort((a,b)=>String(a.at).localeCompare(String(b.at))).slice(-20);return merged;}
 /* --------------------------------------------------------------------------
    v4.1 · Sincronización multidispositivo con Firebase
    - Firebase Authentication: email + contraseña, sin SMTP ni dominio propio.
@@ -853,7 +984,7 @@ async function initCloudSync() {
 
 function render() {
   document.documentElement.dataset.theme=state.settings.theme||'neutral';
-  renderHeader(); renderRoute(); renderHome(); renderCategory(); renderCalendar(); renderContextIsland(); updateInstallStatus(); updateSyncUI();
+  renderHeader(); renderRoute(); renderHome(); renderCategory(); renderCalendar(); renderPlanning(); renderContextIsland(); updateInstallStatus(); updateSyncUI(); applyAppearance();
   requestAnimationFrame(()=>setupRenderedState());
 }
 function renderHeader() {
@@ -870,6 +1001,7 @@ function renderRoute() {
   document.querySelectorAll('.nav-item[data-route]').forEach(b=>b.classList.toggle('active',b.dataset.route===state.route));
   if(state.route==='home'){els.homeView.classList.add('active');els.pageTitle.textContent='Inicio';}
   else if(state.route==='calendar'){els.calendarView.classList.add('active');els.pageTitle.textContent='Calendario';}
+  else if(state.route==='planning'){els.planningView.classList.add('active');els.pageTitle.textContent='Planificar';}
   else {els.tasksView.classList.add('active');els.pageTitle.textContent=CATEGORY_SHORT[state.route];}
 }
 function renderHome() {
@@ -921,7 +1053,7 @@ function animateLoadPercent(target) {
 function renderCategory() {
   if(!['work','personal','study'].includes(state.route)) return;
   els.categoryTitle.textContent=CATEGORY_LABELS[state.route];
-  let tasks=state.tasks.filter(t=>t.category===state.route&&!t.archivedAt);
+  let tasks=state.tasks.filter(t=>t.category===state.route&&!t.archivedAt&&!t.deletedAt);
   if(state.taskFilter==='open') tasks=tasks.filter(t=>!t.completedAt);
   if(state.taskFilter==='today') tasks=tasks.filter(t=>!t.completedAt&&(t.scheduledDate===todayISO()||t.deadline===todayISO()||isOverdueDeadline(t)));
   tasks.sort((a,b)=>Number(Boolean(a.completedAt))-Number(Boolean(b.completedAt))||taskScore(b)-taskScore(a));
@@ -939,12 +1071,15 @@ function renderTaskItem(task) {
   if(task.snoozeCount>=4) badges.push(`<span class="exception-badge snoozed">${ICON('snooze')} ${task.snoozeCount}</span>`);
   if(sub.total) badges.push(`<span class="exception-badge">${sub.done}/${sub.total} pasos</span>`);
   if(task.kind==='reminder'&&task.scheduledTime) badges.push(`<span class="exception-badge">${ICON('bell')} ${task.scheduledTime}</span>`);
-  return `<article class="task-item swipe-row ${done?'is-done':''}" data-task-id="${task.id}">
+  if(isTaskBlocked(task)) badges.push(`<span class="exception-badge blocked">Bloqueada</span>`);
+  if(task.project) badges.push(`<span class="exception-badge project">${escapeHTML(task.project)}</span>`);
+  const risk=getTaskRisk(task);if(risk.level==='high'&&!done)badges.push(`<span class="exception-badge risk">En riesgo</span>`);
+  return `<article class="task-item swipe-row ${done?'is-done':''} ${isTaskBlocked(task)?'is-blocked':''}" data-task-id="${task.id}">
     ${done?'':swipeUnder(task.id)}
     <div class="swipe-content" data-open-task="${task.id}">
       <button class="task-check" data-action="complete" data-id="${task.id}" aria-label="${done?'Completada':'Completar'}">${ICON('check')}</button>
       <div class="task-main"><div class="task-title-line">${task.priority==='high'?'<i class="priority-mark" title="Prioridad alta"></i>':''}<h3 class="task-title">${escapeHTML(task.title)}</h3></div><div class="exception-row">${badges.join('')}</div></div>
-      <div class="task-title-line"><span class="task-duration">${formatMinutes(task.duration)}</span><button class="row-more" data-open-task="${task.id}" aria-label="Acciones">${ICON('more')}</button></div>
+      <div class="task-title-line"><span class="task-duration">${formatMinutes(predictedDuration(task))}</span><button class="row-more" data-open-task="${task.id}" aria-label="Acciones">${ICON('more')}</button></div>
     </div>
   </article>`;
 }
@@ -966,7 +1101,7 @@ function renderCalendar() {
 }
 function getCalendarItems(date) {
   return [
-    ...state.tasks.filter(t=>!t.archivedAt&&t.scheduledDate===date).map(t=>({type:'task',id:t.id,title:t.title,category:t.category,time:t.scheduledTime||'',completed:Boolean(t.completedAt)})),
+    ...state.tasks.filter(t=>!t.archivedAt&&!t.deletedAt&&t.scheduledDate===date).map(t=>({type:'task',id:t.id,title:t.title,category:t.category,time:t.scheduledTime||'',completed:Boolean(t.completedAt)})),
     ...state.externalEvents.filter(e=>e.date===date).map(e=>({type:'external',id:e.id,title:e.title,category:'external',time:externalStartMinutes(e)===null?'':minutesToTime(externalStartMinutes(e)),completed:false}))
   ].sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
 }
@@ -981,7 +1116,7 @@ function renderWeekCapacity(){
   els.weekCapacityStrip.innerHTML=Array.from({length:7},(_,i)=>{const date=addDays(monday,i),l=getDayLoad(date),letter=['L','M','X','J','V','S','D'][i];return `<button class="${l.percent>100?'over':''} ${date===state.calendarSelectedDate?'selected':''}" data-calendar-date="${date}"><b>${letter}</b><span>${l.percent}%</span><i style="--p:${Math.min(100,l.percent)}%"></i></button>`;}).join('');
 }
 function renderDayAgenda() {
-  const date=state.calendarSelectedDate, items=getAgendaItems(date), untimed=state.tasks.filter(t=>!t.archivedAt&&t.scheduledDate===date&&!t.scheduledTime).map(t=>({id:t.id,type:'task',title:t.title,category:t.category,time:'—',minutes:9998,completed:Boolean(t.completedAt)}));
+  const date=state.calendarSelectedDate, items=getAgendaItems(date), untimed=state.tasks.filter(t=>!t.archivedAt&&!t.deletedAt&&t.scheduledDate===date&&!t.scheduledTime).map(t=>({id:t.id,type:'task',title:t.title,category:t.category,time:'—',minutes:9998,completed:Boolean(t.completedAt)}));
   const all=[...items,...untimed].sort((a,b)=>a.minutes-b.minutes);
   els.dayAgendaTitle.textContent=date===todayISO()?'Hoy':formatDate(date,true);
   const load=getDayLoad(date);els.dayAgendaLoad.textContent=`${load.percent}% · ${formatMinutes(load.planned)}`;
@@ -997,6 +1132,7 @@ function renderContextIsland() {
   }
   if(['work','personal','study'].includes(state.route)){icon='plus';label=`Añadir a ${CATEGORY_SHORT[state.route]}`;action='add';}
   if(state.route==='calendar'){icon='plus';label='Añadir tarea';action='add';}
+  if(state.route==='planning'){icon='spark';label='Reequilibrar semana';action='balance-week';}
   els.contextIsland.dataset.islandAction=action;els.contextIsland.innerHTML=`${ICON(icon)}<span>${label}</span>`;
 }
 function setupRenderedState() {
@@ -1039,22 +1175,43 @@ function closeSheet(el) {
 }
 function closeActionSheet(){
   closeSheet(els.actionSheet);
-  state.blockClickThroughUntil = performance.now() + 700;
+  state.blockClickThroughUntil = performance.now() + 180;
+}
+function syncCompactTaskMeta(){
+  if(!els.taskDateCycle||!els.taskPriorityCycle)return;
+  const date=els.taskScheduledDate.value,today=todayISO(),tomorrow=addDays(today,1);
+  const dateLabel=date===today?'Hoy':date===tomorrow?'Mañana':date?formatDate(date):'Sin fecha';
+  els.taskDateCycle.querySelector('strong').textContent=dateLabel;
+  els.taskPriorityCycle.querySelector('strong').textContent=PRIORITY_LABELS[els.taskPriority.value]||'Media';
+}
+function setTaskAdvanced(open){
+  state.ui.advancedTaskOpen=Boolean(open); if(els.taskAdvancedFields)els.taskAdvancedFields.hidden=!open;
+  if(els.taskAdvancedToggle){els.taskAdvancedToggle.classList.toggle('open',open);els.taskAdvancedToggle.querySelector('span').textContent=open?'Menos opciones':'Más opciones';}
+}
+function populateDependencyOptions(currentId=''){
+  if(!els.taskDependsOn)return;const current=els.taskDependsOn.value;
+  els.taskDependsOn.innerHTML='<option value="">Ninguna</option>'+activeTasks().filter(t=>t.id!==currentId).slice(0,40).map(t=>`<option value="${escapeHTML(t.id)}">${escapeHTML(t.title.slice(0,52))}</option>`).join('');
+  if([...els.taskDependsOn.options].some(o=>o.value===current))els.taskDependsOn.value=current;
 }
 function resetTaskForm() {
-  els.taskForm.reset();els.taskEditId.value='';els.taskScheduledDate.value=todayISO();els.taskCategory.value=['work','personal','study'].includes(state.route)?state.route:'work';els.taskDuration.value='30';els.taskScheduledTime.value='';els.taskDeadline.value='';els.taskRecurrence.value='none';setChoice('priority','medium');setChoice('energy','normal');els.taskTodayPriority.checked=false;els.taskNonNegotiable.checked=false;updateCapacityPreview();
+  els.taskForm.reset();els.taskEditId.value='';els.taskScheduledDate.value=todayISO();els.taskCategory.value=['work','personal','study'].includes(state.route)?state.route:'personal';els.taskDuration.value='30';els.taskScheduledTime.value='';els.taskDeadline.value='';els.taskRecurrence.value='none';
+  if(els.taskProject)els.taskProject.value='';if(els.taskOutcome)els.taskOutcome.value='';if(els.taskContext)els.taskContext.value='';if(els.taskDependsOn)els.taskDependsOn.value='';
+  setChoice('priority','medium');setChoice('energy','normal');els.taskTodayPriority.checked=false;els.taskNonNegotiable.checked=false;populateDependencyOptions();setTaskAdvanced(false);syncCompactTaskMeta();updateCapacityPreview();
 }
 function openTaskSheet(prefill={}) {
   resetTaskForm();
   const task=prefill.editId?state.tasks.find(t=>t.id===prefill.editId):null;
   if(task){
-    els.taskEditId.value=task.id;els.taskTitle.value=task.title;els.taskCategory.value=task.category;ensureSelectOption(els.taskDuration,task.duration);els.taskDuration.value=String(task.duration);els.taskScheduledDate.value=task.scheduledDate;els.taskScheduledTime.value=task.scheduledTime;els.taskDeadline.value=task.deadline;els.taskRecurrence.value=task.recurrence;setChoice('priority',task.priority);setChoice('energy',task.energy);els.taskTodayPriority.checked=task.todayPriorityUntil===todayISO();els.taskNonNegotiable.checked=task.nonNegotiableDate===todayISO();els.taskSheetKicker.textContent='Editar tarea';els.taskSheetTitle.textContent='Solo lo necesario';
-  } else { if(prefill.category)els.taskCategory.value=prefill.category;if(prefill.date)els.taskScheduledDate.value=prefill.date;els.taskSheetKicker.textContent='Nueva tarea';els.taskSheetTitle.textContent='Añadir sin ruido'; }
-  updateCapacityPreview();openSheet(els.taskSheet);setTimeout(()=>els.taskTitle.focus(),80);
+    els.taskEditId.value=task.id;els.taskTitle.value=task.title;els.taskCategory.value=task.category;ensureSelectOption(els.taskDuration,task.duration);els.taskDuration.value=String(task.duration);els.taskScheduledDate.value=task.scheduledDate;els.taskScheduledTime.value=task.scheduledTime;els.taskDeadline.value=task.deadline;els.taskRecurrence.value=task.recurrence;setChoice('priority',task.priority);setChoice('energy',task.energy);els.taskTodayPriority.checked=task.todayPriorityUntil===todayISO();els.taskNonNegotiable.checked=task.nonNegotiableDate===todayISO();
+    if(els.taskProject)els.taskProject.value=task.project||'';if(els.taskOutcome)els.taskOutcome.value=task.outcome||'';if(els.taskContext)els.taskContext.value=task.context||'';populateDependencyOptions(task.id);if(els.taskDependsOn)els.taskDependsOn.value=task.dependsOnId||'';
+    els.taskSheetKicker.textContent='Editar tarea';els.taskSheetTitle.textContent='Solo lo necesario';if(els.taskHistoryBtn)els.taskHistoryBtn.hidden=false;setTaskAdvanced(true);
+  } else { if(prefill.category)els.taskCategory.value=prefill.category;if(prefill.date)els.taskScheduledDate.value=prefill.date;els.taskSheetKicker.textContent='Nueva tarea';els.taskSheetTitle.textContent='Captura rápida';if(els.taskHistoryBtn)els.taskHistoryBtn.hidden=true;setTaskAdvanced(false); }
+  applyCategorySuggestion();syncCompactTaskMeta();updateCapacityPreview();openSheet(els.taskSheet);setTimeout(()=>els.taskTitle.focus(),80);
 }
 function setChoice(group,value) {
   const hidden=group==='priority'?els.taskPriority:els.taskEnergy;hidden.value=value;
   document.querySelectorAll(`[data-choice-group="${group}"] button`).forEach(b=>b.classList.toggle('selected',b.dataset.value===value));
+  syncCompactTaskMeta();
 }
 function ensureSelectOption(select,value) { if(![...select.options].some(o=>Number(o.value)===Number(value))){const o=document.createElement('option');o.value=String(value);o.textContent=formatMinutes(value);select.appendChild(o);} }
 function updateCapacityPreview() {
@@ -1117,20 +1274,54 @@ function touchChangedTasks(before=[]){const old=new Map(before.map(t=>[t.id,JSON
 function buzz(ms=8){if(state.settings.haptics&&navigator.vibrate)navigator.vibrate(ms);}
 function recordGestureUse(){state.ui.gestureUses=Math.min(3,Number(state.ui.gestureUses||0)+1);saveUI();}
 
-function completeTask(id){const task=state.tasks.find(t=>t.id===id);if(!task||task.completedAt)return;const started=task.startedAt||((state.ui.activeNowTaskId===id)?state.ui.activeNowStartedAt:'');animatedMutation(id,'completing','Tarea completada',()=>{task.completedAt=new Date().toISOString();if(started){const actual=Math.max(1,Math.round((Date.now()-new Date(started).getTime())/60000));task.actualDuration=actual;recordDurationSample(task,actual);}recordCompletionRhythm(task);if(state.ui.activeNowTaskId===id){state.ui.activeNowTaskId='';state.ui.activeNowStartedAt='';}advanceRecurrence(task);});} 
+function completeTask(id){
+  const task=state.tasks.find(t=>t.id===id);if(!task||task.completedAt)return;
+  const started=task.startedAt||((state.ui.activeNowTaskId===id)?state.ui.activeNowStartedAt:'');
+  animatedMutation(id,'completing','Tarea completada',()=>{
+    task.completedAt=new Date().toISOString();
+    if(started){
+      const actual=Math.max(1,Math.round((Date.now()-new Date(started).getTime())/60000));
+      task.actualDuration=Math.max(actual,Number(task.actualDuration||0));
+      task.sessions=[...(task.sessions||[]),{startedAt:started,endedAt:new Date().toISOString(),minutes:actual}].slice(-30);
+      recordDurationSample(task,actual);
+      state.learning.actualSessions=[...(state.learning.actualSessions||[]),{taskId:task.id,category:task.category,minutes:actual,at:new Date().toISOString()}].slice(-120);
+    }
+    appendTaskHistory(task,'completed');recordCompletionRhythm(task);
+    if(state.ui.activeNowTaskId===id){state.ui.activeNowTaskId='';state.ui.activeNowStartedAt='';}
+    task.startedAt='';task.pausedAt='';advanceRecurrence(task);
+  });
+} 
 function recordDurationSample(task,actual){if(!Number.isFinite(actual)||actual>720)return;state.learning.durationSamples=(state.learning.durationSamples||[]).slice(-59);state.learning.durationSamples.push({estimated:Number(task.duration||30),actual,category:task.category,date:todayISO()});saveLearning();}
 function recordCompletionRhythm(task){const hour=new Date().getHours();const map=state.learning.completionHours||{};map[task.category]=(map[task.category]||[]).slice(-19);map[task.category].push(hour);state.learning.completionHours=map;saveLearning();}
 
-function advanceRecurrence(task){if(task.recurrence==='none')return;const base=task.scheduledDate||todayISO(),next=task.recurrence==='daily'?addDays(base,1):task.recurrence==='weekly'?addDays(base,7):addMonths(base,1);let deadline='';if(task.deadline&&task.scheduledDate){const delta=Math.round((parseISODate(task.deadline)-parseISODate(task.scheduledDate))/86400000);deadline=addDays(next,delta);}state.tasks.push(createTask({...task,id:uid(),scheduledDate:next,deadline,completedAt:null,archivedAt:null,googleEventId:null,snoozeCount:0,postponeAlertedAtCount:0,subtasks:(task.subtasks||[]).map(s=>({id:uid(),title:s.title,completedAt:null}))}));}
+function advanceRecurrence(task){
+  if(task.recurrence==='none')return;
+  const base=task.scheduledDate||todayISO();let next;
+  if(task.recurrence==='daily')next=addDays(base,1);
+  else if(task.recurrence==='weekly')next=addDays(base,7);
+  else if(task.recurrence==='flex-weekly')next=findFlexibleRecurrenceDate(task,base);
+  else next=addMonths(base,1);
+  let deadline='';if(task.deadline&&task.scheduledDate){const delta=Math.round((parseISODate(task.deadline)-parseISODate(task.scheduledDate))/86400000);deadline=addDays(next,delta);}
+  state.tasks.push(createTask({...task,id:uid(),scheduledDate:next,deadline,completedAt:null,archivedAt:null,deletedAt:null,googleEventId:null,snoozeCount:0,postponeAlertedAtCount:0,startedAt:'',actualDuration:0,sessions:[],history:[],subtasks:(task.subtasks||[]).map(s=>({id:uid(),title:s.title,completedAt:null}))}));
+}
 function applySnooze(id,date){const task=state.tasks.find(t=>t.id===id);if(!task)return;const reason=state.pendingSnoozeReason||'time';closeActionSheet();animatedMutation(id,'snoozing',`→ ${weekdayName(date)} · ${formatDate(date)}`,()=>{task.scheduledDate=date;task.snoozeCount+=1;task.lastDecisionReason=reason;task.startedAt='';if(state.ui.activeNowTaskId===id){state.ui.activeNowTaskId='';state.ui.activeNowStartedAt='';}state.learning.decisions=(state.learning.decisions||[]).slice(-79);state.learning.decisions.push({taskId:id,category:task.category,reason,hour:new Date().getHours(),date:todayISO()});saveLearning();});}
 function archiveTask(id){const task=state.tasks.find(t=>t.id===id);if(!task)return;closeActionSheet();animatedMutation(id,'archiving','Tarea archivada',()=>{task.archivedAt=new Date().toISOString();});}
-function deleteTask(id){const task=state.tasks.find(t=>t.id===id);if(!task)return;closeActionSheet();animatedMutation(id,'deleting','Tarea eliminada',()=>{state.tasks=state.tasks.filter(t=>t.id!==id);});}
+function deleteTask(id){const task=state.tasks.find(t=>t.id===id);if(!task)return;closeActionSheet();animatedMutation(id,'deleting','Tarea a la papelera',()=>{task.deletedAt=new Date().toISOString();appendTaskHistory(task,'deleted');});}
 function confirmSplit(id){const task=state.tasks.find(t=>t.id===id);if(!task)return;const parts=[...els.actionSheetContent.querySelectorAll('.split-part')].map(i=>i.value.trim()).filter(Boolean);if(parts.length<2){toast('Escribe al menos dos pasos.');return;}mutateWithUndo('Tarea dividida',()=>{task.subtasks=parts.slice(0,4).map(title=>({id:uid(),title,completedAt:null}));});closeActionSheet();}
 function confirmMakeSpace(){const moves=[...state.pendingSpaceSuggestions];if(!moves.length)return;mutateWithUndo('Día reorganizado',()=>moves.forEach(m=>{const t=state.tasks.find(x=>x.id===m.id);if(t){t.scheduledDate=m.date;t.snoozeCount+=1;}}));state.pendingSpaceSuggestions=[];closeActionSheet();}
 function applyDayClose(action){const pending=tasksOn(todayISO());mutateWithUndo('Cierre del día aplicado',()=>pending.forEach(task=>{if(task.nonNegotiableDate===todayISO())return;if(action==='tomorrow'){const tomorrow=addDays(todayISO(),1);task.scheduledDate=getDayLoad(tomorrow,effectiveTaskLoadMinutes(task),task.id).percent<=95?tomorrow:findNextGap(task,tomorrow);task.snoozeCount+=1;task.lastDecisionReason='time';}if(action==='gaps'){task.scheduledDate=findNextGap(task);task.snoozeCount+=1;task.lastDecisionReason='time';}if(action==='archive')task.archivedAt=new Date().toISOString();}));closeActionSheet();}
 function maybeCelebrateFocus(){const focus=getFocusTasks();if(focus.length===3&&focus.every(t=>t.completedAt)&&state.ui.celebratedDate!==todayISO()){state.ui.celebratedDate=todayISO();saveUI();setTimeout(()=>{els.focusProgress.classList.add('celebrate');buzz(18);toast('Tus 3, hechos ✓');setTimeout(()=>els.focusProgress.classList.remove('celebrate'),650);},190);}}
 
-function contextLabelForTask(task){const text=task.title.toLowerCase();if(/llamar|correo|email|mensaje|cita|reservar|pedir|gesti/.test(text))return 'Gestiones';if(task.category==='personal')return 'Casa y personal';if(task.category==='study')return 'Estudio';return 'Trabajo';}
+function contextFromTask(task){
+  if(task.context)return task.context;
+  const text=String(task.title||'').toLowerCase();
+  if(/llamar|correo|email|mensaje|cita|reservar|pedir|gesti|tramite|trámite/.test(text))return 'admin';
+  if(/comprar|recoger|supermercado|farmacia|fuera/.test(text))return 'out';
+  if(task.category==='personal')return 'home';
+  if(task.energy==='high'||task.category==='study')return 'focus';
+  return 'admin';
+}
+function contextLabelForTask(task){return {admin:'Gestiones',home:'Casa y personal',focus:'Concentración',out:'Fuera'}[contextFromTask(task)]||CATEGORY_SHORT[task.category]||'Tareas';}
 function buildSequence(minutes){const candidates=activeTasks().filter(t=>!t.inbox&&predictedDuration(t)<=minutes).sort((a,b)=>taskScore(b)-taskScore(a));if(!candidates.length)return[];const anchor=contextLabelForTask(candidates[0]);let left=minutes;const seq=[];for(const t of candidates){const d=predictedDuration(t);if(d<=left&&(contextLabelForTask(t)===anchor||seq.length===0)){seq.push(t);left-=d;}if(seq.length>=5)break;}if(seq.length<2){for(const t of candidates){if(seq.includes(t))continue;const d=predictedDuration(t);if(d<=left){seq.push(t);left-=d;}if(seq.length>=4)break;}}return seq;}
 function showQuickTime(minutes){document.body.classList.add('home-results-open');state.quickMode=`time-${minutes}`;const tasks=activeTasks().filter(t=>!t.inbox&&predictedDuration(t)<=minutes).sort((a,b)=>taskScore(b)-taskScore(a)).slice(0,8);els.smartResultsTitle.textContent=`Lo mejor para ${minutes>=60?formatMinutes(minutes):`${minutes} min`}`;renderSmartList(tasks);const seq=buildSequence(minutes);state.sequenceCandidateIds=seq.map(t=>t.id);els.sequenceStartBtn.hidden=seq.length<2;if(seq.length>=2){const total=seq.reduce((s,t)=>s+predictedDuration(t),0),label=contextLabelForTask(seq[0]);els.contextGroupSummary.hidden=false;els.contextGroupSummary.textContent=`${seq.length} ${label.toLowerCase()} · ${formatMinutes(total)}`;}else els.contextGroupSummary.hidden=true;els.smartResults.hidden=false;setTimeout(()=>els.smartResults.scrollIntoView({behavior:reduceMotion()?'auto':'smooth',block:'nearest'}),0);}
 function toggleLowEnergy(){state.lowEnergyMode=!state.lowEnergyMode;renderHome();renderContextIsland();if(state.lowEnergyMode){document.body.classList.add('home-results-open');state.quickMode='low-energy';const tasks=activeTasks().filter(t=>t.energy==='low'||(t.energy==='normal'&&t.duration<=25)).sort((a,b)=>taskScore(b)-taskScore(a)).slice(0,8);els.smartResultsTitle.textContent='Poco esfuerzo, buen avance';renderSmartList(tasks);els.smartResults.hidden=false;}else{els.smartResults.hidden=true;state.quickMode=null;document.body.classList.remove('home-results-open');}}
@@ -1142,24 +1333,42 @@ function openNowMode(taskId=null,queue=null){
   state.nowQueue=Array.isArray(queue)?queue.filter(id=>id!==task.id):state.nowQueue||[];state.nowTaskId=task.id;state.ui.activeNowTaskId=task.id;if(!state.ui.activeNowStartedAt)state.ui.activeNowStartedAt=new Date().toISOString();if(!task.startedAt)task.startedAt=state.ui.activeNowStartedAt;saveUI();saveAll();
   els.nowTaskTitle.textContent=task.title;const predicted=predictedDuration(task);els.nowTaskMeta.textContent=`${formatMinutes(predicted)}${predicted!==task.duration?` estimados · tú pusiste ${formatMinutes(task.duration)}`:''} · ${CATEGORY_SHORT[task.category]}`;els.nowNextBtn.hidden=!state.nowQueue.length;openSheet(els.nowMode);
 }
-function pauseNowMode(){if(state.nowTaskId){state.ui.activeNowTaskId=state.nowTaskId;saveUI();}closeSheet(els.nowMode);state.nowTaskId=null;toast('Pausada. Puedes continuar después.');}
+function pauseNowMode(){
+  if(state.nowTaskId){
+    const task=state.tasks.find(t=>t.id===state.nowTaskId);
+    if(task){task.pausedAt=new Date().toISOString();appendTaskHistory(task,'paused');}
+    state.ui.activeNowTaskId=state.nowTaskId;saveUI();saveAll();
+  }
+  closeSheet(els.nowMode);state.nowTaskId=null;toast('Pausada. Puedes continuar después.');
+}
 function nextNowTask(){const current=state.tasks.find(t=>t.id===state.nowTaskId);if(current)current.startedAt='';const nextId=state.nowQueue.shift();if(!nextId){state.ui.activeNowTaskId='';state.ui.activeNowStartedAt='';saveAll();closeNowMode();return;}state.ui.activeNowStartedAt='';saveAll();closeSheet(els.nowMode);state.nowTaskId=null;setTimeout(()=>openNowMode(nextId,state.nowQueue),30);}
 function closeNowMode(){closeSheet(els.nowMode);state.nowTaskId=null;}
 
 function parseNaturalTask(input){
-  const original=String(input||'').trim();if(!original)return{};let remaining=original;const result={};const lower=()=>remaining.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const original=String(input||'').trim();if(!original)return{};let remaining=original;const result={};
+  const normalize=x=>x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');const lower=()=>normalize(remaining);
   if(/\bmanana\b/.test(lower())){result.scheduledDate=addDays(todayISO(),1);remaining=remaining.replace(/\bmañana\b/ig,'');}else if(/\bhoy\b/.test(lower())){result.scheduledDate=todayISO();remaining=remaining.replace(/\bhoy\b/ig,'');}
+  const weekdayMap={lunes:1,martes:2,miercoles:3,jueves:4,viernes:5,sabado:6,domingo:0};
+  for(const [name,dow] of Object.entries(weekdayMap)){const re=new RegExp(`\\b(?:el\\s+)?${name}\\b`,'i');if(re.test(normalize(remaining))){const now=parseISODate(todayISO()),cur=now.getDay();let delta=(dow-cur+7)%7;if(delta===0)delta=7;result.scheduledDate=addDays(todayISO(),delta);remaining=remaining.replace(new RegExp(`\\b(?:el\\s+)?${name.replace('miercoles','mi[eé]rcoles').replace('sabado','s[aá]bado')}\\b`,'i'),'');break;}}
+  const deadlineMatch=normalize(remaining).match(/\bantes del?\s+(lunes|martes|miercoles|jueves|viernes|sabado|domingo)\b/);if(deadlineMatch){const dow=weekdayMap[deadlineMatch[1]],cur=parseISODate(todayISO()).getDay();let delta=(dow-cur+7)%7;if(delta===0)delta=7;result.deadline=addDays(todayISO(),delta);remaining=remaining.replace(/\bantes del?\s+[a-záéíóú]+\b/i,'');}
   const dateMatch=lower().match(/\b(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?\b/);if(dateMatch){let year=Number(dateMatch[3]||new Date().getFullYear());if(year<100)year+=2000;const d=new Date(year,Number(dateMatch[2])-1,Number(dateMatch[1]));if(!Number.isNaN(d.getTime()))result.scheduledDate=toISO(d);remaining=remaining.replace(dateMatch[0],'');}
   const timeMatch=lower().match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);if(timeMatch){result.scheduledTime=`${String(timeMatch[1]).padStart(2,'0')}:${timeMatch[2]}`;remaining=remaining.replace(timeMatch[0],'');}
   const dur=lower().match(/\b(?:(\d+)\s*h(?:oras?)?)\s*(?:(\d+)\s*m(?:in(?:utos?)?)?)?\b|\b(\d+)\s*m(?:in(?:utos?)?)?\b/);if(dur){const n=Number(dur[1]||0)*60+Number(dur[2]||dur[3]||0);if(n)result.duration=n;remaining=remaining.replace(dur[0],'');}
   for(const [category,pattern] of [['work',/\b(trabajo|laboral)\b/i],['personal',/\b(personal|casa|vivienda|hogar)\b/i],['study',/\b(estudio|estudios)\b/i]]){if(pattern.test(remaining)){result.category=category;remaining=remaining.replace(pattern,'');break;}}
   const energy=remaining.match(/\benerg[ií]a\s+(baja|normal|alta)\b/i);if(energy){result.energy=({baja:'low',normal:'normal',alta:'high'})[energy[1].toLowerCase()];remaining=remaining.replace(energy[0],'');}
   const priority=remaining.match(/\b(prioridad\s+)?(alta|media|baja)\b/i);if(priority){result.priority=({alta:'high',media:'medium',baja:'low'})[priority[2].toLowerCase()];remaining=remaining.replace(priority[0],'');}
-  for(const [recurrence,pattern] of [['daily',/\b(cada d[ií]a|diaria|diario)\b/i],['weekly',/\b(cada semana|semanal)\b/i],['monthly',/\b(cada mes|mensual)\b/i]]){if(pattern.test(remaining)){result.recurrence=recurrence;remaining=remaining.replace(pattern,'');break;}}
+  const flexible=normalize(remaining).match(/\b(\d+)\s+veces\s+(?:esta|por)\s+semana\b/);if(flexible){result.recurrence='flex-weekly';result.flexibleWeeklyCount=Math.max(1,Math.min(7,Number(flexible[1])));remaining=remaining.replace(/\b\d+\s+veces\s+(?:esta|por)\s+semana\b/i,'');}
+  if(!result.recurrence){for(const [recurrence,pattern] of [['daily',/\b(cada d[ií]a|diaria|diario)\b/i],['weekly',/\b(cada semana|semanal)\b/i],['monthly',/\b(cada mes|mensual)\b/i]]){if(pattern.test(remaining)){result.recurrence=recurrence;remaining=remaining.replace(pattern,'');break;}}}
+  const project=remaining.match(/\bproyecto\s+([^,;]+)$/i);if(project){result.project=project[1].trim();remaining=remaining.replace(project[0],'');}
+  if(/\b(fuera|recados)\b/i.test(remaining))result.context='out';else if(/\b(gestiones|administrativo)\b/i.test(remaining))result.context='admin';else if(/\b(concentracion|concentración|profundo)\b/i.test(remaining))result.context='focus';
   result.title=remaining.replace(/\s{2,}/g,' ').replace(/\s+([,.;])/g,'$1').trim().replace(/^[-,.;\s]+|[-,.;\s]+$/g,'');return result;
 }
 
-function openSettings(){els.settingsName.value=state.settings.name;els.settingsCapacity.value=String(state.settings.dailyCapacity);els.settingsHaptics.checked=Boolean(state.settings.haptics);els.settingsWeekendMode.checked=Boolean(state.settings.weekendMode);els.settingsTheme.value=state.settings.theme||'neutral';els.settingsDefaultProfile.value=state.settings.defaultProfile||'normal';els.settingsPrivacyMode.checked=Boolean(state.settings.privacyMode);els.localLockStatus.textContent=state.security.enabled?'Activado en este dispositivo':'Desactivado';updateInstallStatus();updateSyncUI();openSheet(els.settingsSheet);}
+function openSettings(){
+  els.settingsName.value=state.settings.name;els.settingsCapacity.value=String(state.settings.dailyCapacity);els.settingsHaptics.checked=Boolean(state.settings.haptics);els.settingsWeekendMode.checked=Boolean(state.settings.weekendMode);els.settingsTheme.value=state.settings.theme||'neutral';els.settingsDefaultProfile.value=state.settings.defaultProfile||'normal';els.settingsPrivacyMode.checked=Boolean(state.settings.privacyMode);
+  if(els.settingsIntelligentMode)els.settingsIntelligentMode.checked=state.settings.intelligentMode!==false;if(els.settingsBuffer)els.settingsBuffer.value=String(state.settings.bufferPercent??15);if(els.settingsMaxHigh)els.settingsMaxHigh.value=String(state.settings.maxHighPerDay||2);if(els.settingsWorkFreeWeekend)els.settingsWorkFreeWeekend.checked=Boolean(state.settings.workFreeWeekend);if(els.settingsAppearance)els.settingsAppearance.value=state.settings.appearance||'system';
+  els.localLockStatus.textContent=state.security.enabled?'Activado en este dispositivo':'Desactivado';updateBiometricUI();updateInstallStatus();updateSyncUI();openSheet(els.settingsSheet);
+}
 function openResetAppConfirmation(){
   closeSheet(els.settingsSheet);
   showActionSheet(`${sheetHeader('Resetear aplicación','Empezar desde cero')}<div class="action-summary">Se borrarán todas las tareas, ajustes, historial y memoria de Organizador. Si tienes una cuenta sincronizada, también se vaciarán sus datos de Firestore. La cuenta de acceso se conserva.</div><div class="sheet-actions"><button class="ghost-btn" data-close-action>Cancelar</button><button class="primary-btn danger-btn" data-confirm-reset-app>Resetear todo</button></div>`);
@@ -1254,19 +1463,39 @@ function openPerformanceInsight(){const w=getWeeklyPlanningInsight();showActionS
 function openUniversalSearch(query=''){
   showActionSheet(`${sheetHeader('Buscar','Todo, sin filtros')}<label class="field"><input id="universalSearchInput" type="search" placeholder="viernes, dentista, trabajo…" value="${escapeHTML(query)}" autocomplete="off" /></label><div class="search-results" id="universalSearchResults"></div>`);setTimeout(()=>{const input=document.getElementById('universalSearchInput');input?.focus();renderSearchResults(input?.value||'');},60);
 }
-function renderSearchResults(query){const box=document.getElementById('universalSearchResults');if(!box)return;const q=String(query||'').trim().toLowerCase();let tasks=state.tasks.filter(t=>!t.archivedAt);if(q){tasks=tasks.filter(t=>`${t.title} ${CATEGORY_LABELS[t.category]} ${t.scheduledDate} ${formatDate(t.scheduledDate,true)}`.toLowerCase().includes(q));}tasks=tasks.sort((a,b)=>taskScore(b)-taskScore(a)).slice(0,12);box.innerHTML=tasks.length?tasks.map(t=>`<button class="search-result" data-search-open="${t.id}"><strong>${escapeHTML(t.title)}</strong><span>${CATEGORY_SHORT[t.category]} · ${t.scheduledDate?formatDate(t.scheduledDate):'sin fecha'}</span></button>`).join(''):'<div class="focus-empty">Sin resultados.</div>';}
-function openCommandPalette(){showActionSheet(`${sheetHeader('Comandos','Ir directo')}<div class="palette-grid"><button data-palette="task">+ Nueva tarea</button><button data-palette="search">⌕ Buscar</button><button data-palette="now">▶ Ahora</button><button data-palette="today">Hoy</button><button data-palette="study">Estudios</button><button data-palette="close-day">Cerrar día</button></div>`);}
+function renderSearchResults(query){
+  const box=document.getElementById('universalSearchResults');if(!box)return;let q=String(query||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const synonyms={casa:['personal','vivienda','hogar'],hogar:['personal','vivienda','casa'],curro:['trabajo','laboral'],estudiar:['estudio','estudios'],corto:['10 min','15 min'],urgente:['alta','vence']};const extras=synonyms[q]||[];
+  let tasks=state.tasks.filter(t=>!t.archivedAt&&!t.deletedAt);if(q){tasks=tasks.filter(t=>{const hay=`${t.title} ${CATEGORY_LABELS[t.category]} ${t.scheduledDate} ${formatDate(t.scheduledDate,true)} ${t.project} ${t.outcome} ${contextLabelForTask(t)} ${PRIORITY_LABELS[t.priority]}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');return hay.includes(q)||extras.some(x=>hay.includes(x));});}
+  tasks=tasks.sort((a,b)=>taskScore(b)-taskScore(a)).slice(0,12);box.innerHTML=tasks.length?tasks.map(t=>`<button class="search-result" data-search-open="${t.id}"><strong>${escapeHTML(t.title)}</strong><span>${CATEGORY_SHORT[t.category]} · ${t.project?escapeHTML(t.project)+' · ':''}${t.scheduledDate?formatDate(t.scheduledDate):'sin fecha'}</span></button>`).join(''):'<div class="focus-empty">Sin resultados.</div>';
+}
+function openCommandPalette(){showActionSheet(`${sheetHeader('Comandos','Ir directo')}<div class="palette-grid"><button data-palette="task">+ Nueva tarea</button><button data-palette="search">⌕ Buscar</button><button data-palette="now">▶ Ahora</button><button data-palette="today">Hoy</button><button data-palette="planning">Planificar</button><button data-palette="trash">Papelera</button><button data-palette="study">Estudios</button><button data-palette="close-day">Cerrar día</button></div>`);}
 function exportBackup(){const payload={schemaVersion:DATA_SCHEMA_VERSION,appVersion:CACHE_VERSION,exportedAt:new Date().toISOString(),tasks:state.tasks,settings:state.settings,externalEvents:state.externalEvents,ui:{focus:state.ui.focus},learning:state.learning};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`organizador-backup-${todayISO()}.json`;document.body.appendChild(a);a.click();const url=a.href;a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Copia preparada.');}
 async function previewBackup(file){try{const data=JSON.parse(await file.text());if(!Array.isArray(data.tasks))throw new Error('Formato no válido');const incoming=data.tasks.map(normalizeTask),current=new Map(state.tasks.map(t=>[t.id,t]));let fresh=0,modified=0,conflicts=0;for(const t of incoming){const c=current.get(t.id);if(!c)fresh++;else if(taskFingerprint(c)!==taskFingerprint(t)){modified++;if((c.modifiedAt||'')!== (t.modifiedAt||''))conflicts++;}}state.pendingBackup={data:{...data,tasks:incoming},fresh,modified,conflicts};showActionSheet(`${sheetHeader('Restauración segura','Nada se sobrescribe a ciegas')}<div class="action-summary"><strong>${fresh}</strong> nuevas · <strong>${modified}</strong> modificadas · <strong>${conflicts}</strong> conflictos.</div><div class="sheet-actions"><button class="ghost-btn" data-close-action>Cancelar</button><button class="primary-btn" data-confirm-backup>Combinar copia</button></div>`);}catch(e){toast('La copia no es válida.');}}
 function confirmBackup(){const p=state.pendingBackup;if(!p)return;const snapshot=deepClone(state.tasks),map=new Map(state.tasks.map(t=>[t.id,t]));p.data.tasks.forEach(t=>{const cur=map.get(t.id);if(!cur||String(t.modifiedAt||'')>String(cur.modifiedAt||''))map.set(t.id,t);});state.tasks=[...map.values()].map(normalizeTask);if(p.data.settings)state.settings={...DEFAULT_SETTINGS,...p.data.settings};if(p.data.externalEvents)state.externalEvents=p.data.externalEvents;if(p.data.learning)state.learning={...DEFAULT_LEARNING,...p.data.learning};saveAll();render();pushUndo('Copia restaurada',snapshot);state.pendingBackup=null;closeActionSheet();toast('Copia combinada.');}
 async function sha256(text){const data=new TextEncoder().encode(text),hash=await crypto.subtle.digest('SHA-256',data);return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');}
+function bytesToB64url(bytes){return btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function b64urlToBytes(text){const b64=String(text||'').replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(String(text||'').length/4)*4,'=');return Uint8Array.from(atob(b64),c=>c.charCodeAt(0));}
+async function setupBiometric(){
+  if(!window.PublicKeyCredential||!navigator.credentials?.create){toast('La biometría web no está disponible aquí.');return;}
+  try{
+    const challenge=crypto.getRandomValues(new Uint8Array(32)),userId=crypto.getRandomValues(new Uint8Array(16));
+    const credential=await navigator.credentials.create({publicKey:{challenge,rp:{name:'Organizador'},user:{id:userId,name:'local@organizador',displayName:'Organizador local'},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},timeout:60000,attestation:'none'}});
+    if(!credential?.rawId)throw new Error('Sin credencial');state.security.biometricCredentialId=bytesToB64url(new Uint8Array(credential.rawId));saveSecurity();updateBiometricUI();toast('Desbloqueo del dispositivo activado.');
+  }catch(error){console.warn('Biometric setup',error);toast('No se pudo activar el desbloqueo del dispositivo.');}
+}
+async function unlockBiometric(){
+  if(!state.security.biometricCredentialId||!navigator.credentials?.get)return false;
+  try{const credential=await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{id:b64urlToBytes(state.security.biometricCredentialId),type:'public-key'}],userVerification:'required',timeout:60000}});if(credential){els.localLockScreen.hidden=true;els.localLockScreen.setAttribute('aria-hidden','true');els.localLockError.textContent='';return true;}}catch(error){console.warn('Biometric unlock',error);}return false;
+}
+function updateBiometricUI(){if(els.biometricStatus)els.biometricStatus.textContent=state.security.biometricCredentialId?'Activado en este dispositivo':'Configurar si está disponible';if(els.localBiometricBtn)els.localBiometricBtn.hidden=!state.security.biometricCredentialId;}
 function openLocalLockSetup(){if(state.security.enabled){showActionSheet(`${sheetHeader('Bloqueo local','Protección de este dispositivo')}<div class="action-summary">El PIN está activado solo en este dispositivo. No se sincroniza con Firebase.</div><div class="sheet-actions"><button class="ghost-btn" data-disable-lock>Desactivar</button><button class="primary-btn" data-change-lock>Cambiar PIN</button></div>`);}else showPinSetup();}
 function showPinSetup(){showActionSheet(`${sheetHeader('Bloqueo local','Crear PIN')}<label class="field"><span>PIN de 4 a 6 cifras</span><input id="newLocalPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" /></label><div class="sheet-actions"><button class="ghost-btn" data-close-action>Cancelar</button><button class="primary-btn" data-save-pin>Activar</button></div>`);}
 async function saveLocalPin(){const pin=document.getElementById('newLocalPin')?.value||'';if(!/^\d{4,6}$/.test(pin)){toast('Usa entre 4 y 6 cifras.');return;}state.security={enabled:true,pinHash:await sha256(pin)};saveSecurity();closeActionSheet();toast('Bloqueo local activado.');}
-function showLocalLock(){if(!state.security.enabled)return;els.localLockPin.value='';els.localLockError.textContent='';els.localLockScreen.hidden=false;els.localLockScreen.setAttribute('aria-hidden','false');setTimeout(()=>els.localLockPin.focus(),100);}
+function showLocalLock(){if(!state.security.enabled&&!state.security.biometricCredentialId)return;els.localLockPin.value='';els.localLockError.textContent='';els.localLockScreen.hidden=false;els.localLockScreen.setAttribute('aria-hidden','false');updateBiometricUI();setTimeout(()=>{if(state.security.biometricCredentialId)unlockBiometric();else els.localLockPin.focus();},120);}
 async function unlockLocal(){const hash=await sha256(els.localLockPin.value||'');if(hash===state.security.pinHash){els.localLockScreen.hidden=true;els.localLockScreen.setAttribute('aria-hidden','true');els.localLockError.textContent='';}else{els.localLockError.textContent='PIN incorrecto';buzz(20);}}
-function openConflictReview(){const c=state.conflicts[0];if(!c){toast('No hay conflictos pendientes.');return;}showActionSheet(`${sheetHeader('Cambio en otro dispositivo','Elige una versión')}<div class="conflict-card"><strong>Este dispositivo</strong><span>${escapeHTML(c.local.title)} · ${formatDate(c.local.scheduledDate)}</span></div><div class="conflict-card"><strong>Otro dispositivo</strong><span>${escapeHTML(c.remote.title)} · ${formatDate(c.remote.scheduledDate)}</span></div><div class="sheet-actions"><button class="ghost-btn" data-conflict="remote">Usar nueva versión</button><button class="primary-btn" data-conflict="local">Conservar la mía</button></div>`);}
-function resolveConflict(choice){const c=state.conflicts.shift();if(!c)return;if(choice==='remote'){const i=state.tasks.findIndex(t=>t.id===c.remote.id);if(i>=0)state.tasks[i]=normalizeTask(c.remote);}else{const t=state.tasks.find(x=>x.id===c.local.id);if(t){t.modifiedAt=new Date().toISOString();state.sync.forceRetry=true;}}saveAll();closeActionSheet();render();if(state.conflicts.length)setTimeout(openConflictReview,100);}
+function openConflictReview(){const c=state.conflicts[0];if(!c){toast('No hay conflictos pendientes.');return;}showActionSheet(`${sheetHeader('Cambio en otro dispositivo','Solo aparece cuando hace falta')}<div class="conflict-card"><strong>Este dispositivo</strong><span>${escapeHTML(c.local.title)} · ${formatDate(c.local.scheduledDate)}</span></div><div class="conflict-card"><strong>Otro dispositivo</strong><span>${escapeHTML(c.remote.title)} · ${formatDate(c.remote.scheduledDate)}</span></div><div class="sheet-actions three"><button class="ghost-btn" data-conflict="remote">Usar nueva</button><button class="ghost-btn" data-conflict="merge">Combinar</button><button class="primary-btn" data-conflict="local">Conservar mía</button></div>`);}
+function resolveConflict(choice){const c=state.conflicts.shift();if(!c)return;const i=state.tasks.findIndex(t=>t.id===c.remote.id);if(choice==='remote'){if(i>=0)state.tasks[i]=normalizeTask(c.remote);}else if(choice==='merge'){if(i>=0)state.tasks[i]=mergeConflictFields(c.local,c.remote);state.sync.forceRetry=true;}else{const t=state.tasks.find(x=>x.id===c.local.id);if(t){t.modifiedAt=new Date().toISOString();state.sync.forceRetry=true;}}saveAll();closeActionSheet();render();if(state.conflicts.length)setTimeout(openConflictReview,100);}
 function detectRemoteConflicts(remoteTasks){const preserve=new Set();if(!state.sync.initialized)return preserve;const localMap=new Map(state.tasks.map(t=>[t.id,t])),baseline=state.sync.baselineTasks||new Map();for(const remote of remoteTasks){const local=localMap.get(remote.id);if(!local||remote.lastDeviceId===state.sync.deviceId)continue;const localChanged=baseline.get(local.id)&&baseline.get(local.id)!==taskFingerprint(local);const remoteDiff=taskFingerprint(local)!==taskFingerprint(remote);if(localChanged&&remoteDiff){preserve.add(local.id);if(!state.conflicts.some(c=>c.local.id===local.id))state.conflicts.push({local:deepClone(local),remote:deepClone(remote)});}}if(state.conflicts.length)setTimeout(()=>{if(!document.querySelector('.modal-layer.is-open'))openConflictReview();},150);return preserve;}
 function updateLastOpened(){const previous=state.ui.lastOpenedDate;const today=todayISO();if(previous&&previous<today){const days=Math.max(0,dayDistance(today)-dayDistance(previous));state.ui.recoveryPendingDays=days>=3?days:0;}state.ui.lastOpenedDate=today;state.ui.lastOpenedAt=new Date().toISOString();saveUI();}
 function updateInstallStatus(){if(!els.installAppStatus)return;const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;if(standalone){els.installAppStatus.textContent='Ya está instalada';els.installAppBtn.disabled=true;}else if(state.installPrompt){els.installAppStatus.textContent='Instalar con un toque';els.installAppBtn.disabled=false;}else if(isIOS()){els.installAppStatus.textContent='Añadir a pantalla de inicio en Safari';els.installAppBtn.disabled=false;}else{els.installAppStatus.textContent='Disponible cuando el navegador lo permita';els.installAppBtn.disabled=false;}}
@@ -1368,6 +1597,7 @@ document.addEventListener('pointercancel',()=>{
   if(gesture){clearTimeout(gesture.timer);gesture.row.classList.remove('swiping','show-complete','show-snooze');gesture.row.querySelector('.swipe-content')?.style.removeProperty('transform');gesture=null;}
   // pointercancel no debe dejar un bloqueo global activo.
   releaseSuppressedClicks();
+  state.ignorePointerUpPointerId=null;
 },{capture:true});
 window.addEventListener('blur',()=>{cancelActiveGesture();releaseSuppressedClicks();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelActiveGesture();releaseSuppressedClicks();}});
@@ -1379,7 +1609,7 @@ const DIRECT_COMMAND_SELECTOR = [
   '[data-snooze-choice]','[data-confirm-custom-snooze]','[data-confirm-split]','[data-confirm-space]',
   '[data-set-priority]','[data-set-energy]','[data-move-category]','[data-lower-priority]',
   '[data-postpone-help]','[data-review-date]','[data-day-close]','[data-confirm-reset-app]',
-  '[data-snooze-reason]','[data-day-profile]','[data-recovery-dismiss]','[data-recovery-apply]','[data-stale-task]','[data-stale-keep]','[data-stale-gap]','[data-stale-archive]','[data-inbox-place]','[data-search-open]','[data-palette]','[data-confirm-backup]','[data-disable-lock]','[data-change-lock]','[data-save-pin]','[data-conflict]',
+  '[data-snooze-reason]','[data-day-profile]','[data-recovery-dismiss]','[data-recovery-apply]','[data-stale-task]','[data-stale-keep]','[data-stale-gap]','[data-stale-archive]','[data-inbox-place]','[data-search-open]','[data-palette]','[data-confirm-backup]','[data-disable-lock]','[data-change-lock]','[data-save-pin]','[data-conflict]','[data-smart-list]','[data-trash-restore]','[data-trash-empty]','[data-create-outcome]','[data-procrastination]','[data-task-history]',
   '.row-more[data-open-task]'
 ].join(',');
 
@@ -1428,12 +1658,18 @@ function runDataCommand(target){
   const staleArchive=target.closest?.('[data-stale-archive]');if(staleArchive){archiveTask(staleArchive.dataset.staleArchive);return true;}
   const inbox=target.closest?.('[data-inbox-place]');if(inbox){placeInbox(inbox.dataset.id,inbox.dataset.inboxPlace);return true;}
   const sr=target.closest?.('[data-search-open]');if(sr){closeActionSheet();setTimeout(()=>openTaskActions(sr.dataset.searchOpen),40);return true;}
-  const palette=target.closest?.('[data-palette]');if(palette){const p=palette.dataset.palette;closeActionSheet();if(p==='task')setTimeout(()=>openTaskSheet(),40);if(p==='search')setTimeout(()=>openUniversalSearch(),40);if(p==='now')setTimeout(()=>openNowMode(),40);if(p==='today'){state.route='home';render();}if(p==='study'){state.route='study';render();}if(p==='close-day')setTimeout(openDayClose,40);return true;}
+  const palette=target.closest?.('[data-palette]');if(palette){const p=palette.dataset.palette;closeActionSheet();if(p==='task')setTimeout(()=>openTaskSheet(),40);if(p==='search')setTimeout(()=>openUniversalSearch(),40);if(p==='now')setTimeout(()=>openNowMode(),40);if(p==='today'){state.route='home';render();}if(p==='study'){state.route='study';render();}if(p==='planning'){state.route='planning';render();}if(p==='trash')setTimeout(openTrash,40);if(p==='close-day')setTimeout(openDayClose,40);return true;}
   if(target.closest?.('[data-confirm-backup]')){confirmBackup();return true;}
   if(target.closest?.('[data-disable-lock]')){state.security={...DEFAULT_SECURITY};saveSecurity();closeActionSheet();toast('Bloqueo desactivado.');return true;}
   if(target.closest?.('[data-change-lock]')){showPinSetup();return true;}
   if(target.closest?.('[data-save-pin]')){saveLocalPin();return true;}
   const conflict=target.closest?.('[data-conflict]');if(conflict){resolveConflict(conflict.dataset.conflict);return true;}
+  const smart=target.closest?.('[data-smart-list]');if(smart){openSmartList(smart.dataset.smartList);return true;}
+  const restore=target.closest?.('[data-trash-restore]');if(restore){restoreTrashTask(restore.dataset.trashRestore);return true;}
+  if(target.closest?.('[data-trash-empty]')){emptyTrash();return true;}
+  if(target.closest?.('[data-create-outcome]')){createOutcomeFromSheet();return true;}
+  const procrast=target.closest?.('[data-procrastination]');if(procrast){handleProcrastination(procrast.dataset.id,procrast.dataset.procrastination);return true;}
+  const hist=target.closest?.('[data-task-history]');if(hist){openTaskHistory(hist.dataset.taskHistory);return true;}
   return false;
 }
 
@@ -1444,6 +1680,7 @@ els.actionSheetContent.addEventListener('pointerdown',event=>{
   if(!close)return;
   event.preventDefault();
   event.stopPropagation();
+  state.ignorePointerUpPointerId=event.pointerId;
   closeActionSheet();
 },{capture:true});
 
@@ -1452,12 +1689,16 @@ document.addEventListener('pointerdown',event=>{
   const close=event.target.closest?.('[data-close-sheet],[data-close-now]');
   if(!close)return;
   event.preventDefault();event.stopPropagation();releaseSuppressedClicks();
+  state.ignorePointerUpPointerId=event.pointerId;
   if(close.hasAttribute?.('data-close-now'))closeNowMode();else closeSheet(document.getElementById(close.dataset.closeSheet));
   close.__opiPointerHandledUntil=performance.now()+650;
 },{capture:true});
 
 /* iOS ejecuta estos controles en pointerup. click queda como respaldo para teclado/VoiceOver. */
 document.addEventListener('pointerup',event=>{
+  // Si una hoja se cerró en pointerdown, bloqueamos este pointerup para que no caiga
+  // sobre un control que estaba detrás (especialmente el botón ··· de una tarea en iOS).
+  if(state.ignorePointerUpPointerId!=null && event.pointerId===state.ignorePointerUpPointerId){state.ignorePointerUpPointerId=null;event.preventDefault();event.stopPropagation();return;}
   const command=event.target.closest?.(DIRECT_COMMAND_SELECTOR);
   if(!command)return;
   // Evita que el mismo pointerup que abrió un modal mediante long-press lo cierre por el backdrop.
@@ -1497,6 +1738,8 @@ document.addEventListener('click',event=>{
   const openTask=event.target.closest('[data-open-task]');if(openTask){openTaskActions(openTask.dataset.openTask);return;}
   const calendarDate=event.target.closest('[data-calendar-date]');if(calendarDate){state.calendarSelectedDate=calendarDate.dataset.calendarDate;state.calendarCursor=startOfMonth(parseISODate(state.calendarSelectedDate));renderCalendar();return;}
   const gap=event.target.closest('[data-gap-minutes]');if(gap){showQuickTime(Number(gap.dataset.gapMinutes));return;}
+  const planDate=event.target.closest('[data-plan-date]');if(planDate&&!event.target.closest('[data-open-task]')){state.calendarSelectedDate=planDate.dataset.planDate;state.calendarCursor=startOfMonth(parseISODate(state.calendarSelectedDate));state.route='calendar';render();return;}
+  const smartList=event.target.closest('[data-smart-list]');if(smartList){openSmartList(smartList.dataset.smartList);return;}
 });
 
 /* Cerrar con Escape también funciona con nuestras capas, sin depender de <dialog>. */
@@ -1529,17 +1772,41 @@ els.dayProfileBtn.addEventListener('click',openDayProfile);
 els.sequenceStartBtn.addEventListener('click',()=>{const q=[...state.sequenceCandidateIds];if(!q.length)return;closeSmartResults();openNowMode(q.shift(),q);});
 els.smartRecommendation.addEventListener('click',()=>{const type=els.smartRecommendation.dataset.recommendation;if(type==='space')openMakeSpace();else if(type==='tomorrow')openTomorrowReview();else if(type==='overdue')openOverdueReview();else if(type==='recovery')openRecoveryReview();else if(type==='stale')openStaleReview();else if(type==='inbox')openInboxReview();else if(type==='life')openLifeReview();else if(type==='performance')openPerformanceInsight();else if(type==='attention')openAttention();else if(type==='continue')openNowMode(state.ui.activeNowTaskId);});
 document.getElementById('closeSmartResults').addEventListener('click',closeSmartResults);
-els.contextIsland.addEventListener('click',()=>{if(state.islandLongPressed){state.islandLongPressed=false;return;}const action=els.contextIsland.dataset.islandAction;if(action==='space')openMakeSpace();else if(action==='close-day')openDayClose();else if(action==='gap')showQuickTime(Number(els.contextIsland.dataset.minutes||30));else openTaskSheet({category:['work','personal','study'].includes(state.route)?state.route:undefined});});
+els.contextIsland.addEventListener('click',()=>{if(state.islandLongPressed){state.islandLongPressed=false;return;}const action=els.contextIsland.dataset.islandAction;if(action==='space')openMakeSpace();else if(action==='close-day')openDayClose();else if(action==='gap')showQuickTime(Number(els.contextIsland.dataset.minutes||30));else if(action==='balance-week')applyWeekBalance();else openTaskSheet({category:['work','personal','study'].includes(state.route)?state.route:undefined});});
 els.undoBtn.addEventListener('click',undoLast);
 
 els.taskScheduledDate.addEventListener('change',updateCapacityPreview);els.taskDuration.addEventListener('change',updateCapacityPreview);
-els.taskForm.addEventListener('submit',event=>{event.preventDefault();const title=els.taskTitle.value.trim();if(!title)return;const editId=els.taskEditId.value,existing=state.tasks.find(t=>t.id===editId),snapshot=deepClone(state.tasks),data={title,category:els.taskCategory.value,priority:els.taskPriority.value,energy:els.taskEnergy.value,scheduledDate:els.taskScheduledDate.value,scheduledTime:els.taskScheduledTime.value,deadline:els.taskDeadline.value,duration:Number(els.taskDuration.value),recurrence:els.taskRecurrence.value,todayPriorityUntil:els.taskTodayPriority.checked?todayISO():'',nonNegotiableDate:els.taskNonNegotiable.checked?todayISO():'',modifiedAt:new Date().toISOString()};if(data.nonNegotiableDate&&!existing&&activeTasks().filter(t=>t.nonNegotiableDate===todayISO()).length>=3){data.nonNegotiableDate='';toast('Máximo 3 no negociables al día.');}if(existing)Object.assign(existing,data);else {const created=createTask(data);state.tasks.push(created);considerTaskForFocus(created);}saveAll();closeSheet(els.taskSheet);render();pushUndo(existing?'Tarea actualizada':'Tarea creada',snapshot);const load=data.scheduledDate?getDayLoad(data.scheduledDate):null;toast(load&&load.percent>100?`Ese día queda al ${load.percent}%`:(existing?'Cambios guardados.':'Tarea guardada.'));});
-els.quickForm.addEventListener('submit',event=>{event.preventDefault();const parsed=parseNaturalTask(els.quickTaskInput.value);if(!parsed.title){toast('Escribe una tarea.');return;}const snapshot=deepClone(state.tasks);const hasStructure=Boolean(parsed.category||parsed.scheduledDate||parsed.scheduledTime||parsed.priority||parsed.energy||parsed.duration||parsed.recurrence);const task=createTask({title:parsed.title,category:parsed.category||(['work','personal','study'].includes(state.route)?state.route:'personal'),priority:parsed.priority||'medium',energy:parsed.energy||'normal',scheduledDate:parsed.scheduledDate||(hasStructure?todayISO():''),scheduledTime:parsed.scheduledTime||'',deadline:'',duration:parsed.duration||30,recurrence:parsed.recurrence||'none',inbox:!hasStructure,modifiedAt:new Date().toISOString()});state.tasks.push(task);considerTaskForFocus(task);saveAll();closeSheet(els.quickSheet);render();pushUndo('Tarea creada',snapshot);toast(task.inbox?'Guardada en Inbox.':'Entrada rápida creada.');});
+els.taskForm.addEventListener('submit',event=>{
+  event.preventDefault();const title=els.taskTitle.value.trim();if(!title)return;
+  const editId=els.taskEditId.value,existing=state.tasks.find(t=>t.id===editId),snapshot=deepClone(state.tasks);
+  const data={title,category:els.taskCategory.value,priority:els.taskPriority.value,energy:els.taskEnergy.value,scheduledDate:els.taskScheduledDate.value,scheduledTime:els.taskScheduledTime.value,deadline:els.taskDeadline.value,duration:Number(els.taskDuration.value),recurrence:els.taskRecurrence.value,todayPriorityUntil:els.taskTodayPriority.checked?todayISO():'',nonNegotiableDate:els.taskNonNegotiable.checked?todayISO():'',project:els.taskProject?.value.trim()||'',outcome:els.taskOutcome?.value.trim()||'',dependsOnId:els.taskDependsOn?.value||'',context:els.taskContext?.value||'',modifiedAt:new Date().toISOString()};
+  if(data.nonNegotiableDate&&!existing&&activeTasks().filter(t=>t.nonNegotiableDate===todayISO()).length>=3){data.nonNegotiableDate='';toast('Máximo 3 no negociables al día.');}
+  if(data.priority==='high'&&state.settings.intelligentMode){const high=tasksOn(data.scheduledDate||todayISO()).filter(t=>t.id!==editId&&t.priority==='high').length;if(high>=Number(state.settings.maxHighPerDay||2))toast('Ese día ya tiene varias tareas de prioridad alta.');}
+  if(existing){const before=deepClone(existing);Object.assign(existing,data);appendTaskHistory(existing,'edited',before);}
+  else {const created=createTask(data);appendTaskHistory(created,'created');state.tasks.push(created);learnCategoryCorrection(created);considerTaskForFocus(created);}
+  saveAll();closeSheet(els.taskSheet);render();pushUndo(existing?'Tarea actualizada':'Tarea creada',snapshot);
+  const load=data.scheduledDate?getDayLoad(data.scheduledDate):null;toast(load&&load.percent>100?`Ese día queda al ${load.percent}%`:(existing?'Cambios guardados.':'Tarea guardada.'));
+});
+els.quickForm.addEventListener('submit',event=>{event.preventDefault();const parsed=parseNaturalTask(els.quickTaskInput.value);if(!parsed.title){toast('Escribe una tarea.');return;}const snapshot=deepClone(state.tasks);const hasStructure=Boolean(parsed.category||parsed.scheduledDate||parsed.scheduledTime||parsed.priority||parsed.energy||parsed.duration||parsed.recurrence||parsed.deadline||parsed.project||parsed.context);const task=createTask({title:parsed.title,category:parsed.category||suggestCategoryForTitle(parsed.title)||(['work','personal','study'].includes(state.route)?state.route:'personal'),priority:parsed.priority||'medium',energy:parsed.energy||'normal',scheduledDate:parsed.scheduledDate||(hasStructure?todayISO():''),scheduledTime:parsed.scheduledTime||'',deadline:parsed.deadline||'',duration:parsed.duration||30,recurrence:parsed.recurrence||'none',flexibleWeeklyCount:parsed.flexibleWeeklyCount||3,project:parsed.project||'',context:parsed.context||'',inbox:!hasStructure,modifiedAt:new Date().toISOString()});appendTaskHistory(task,'created');state.tasks.push(task);learnCategoryCorrection(task);considerTaskForFocus(task);saveAll();closeSheet(els.quickSheet);render();pushUndo('Tarea creada',snapshot);toast(task.inbox?'Guardada en Inbox.':'Entrada rápida creada.');});
 els.reminderForm.addEventListener('submit',event=>{event.preventDefault();const title=els.reminderTitle.value.trim();if(!title)return;const snapshot=deepClone(state.tasks);const reminder=createTask({title,kind:'reminder',category:els.reminderCategory.value,priority:'medium',energy:'low',scheduledDate:els.reminderDate.value,scheduledTime:els.reminderTime.value,deadline:'',duration:5,recurrence:'none'});state.tasks.push(reminder);considerTaskForFocus(reminder);saveAll();closeSheet(els.reminderSheet);render();pushUndo('Recordatorio creado',snapshot);toast('Recordatorio guardado.');});
 
-els.settingsForm.addEventListener('submit',event=>{event.preventDefault();state.settings.name=els.settingsName.value.trim()||'Angel';state.settings.dailyCapacity=Number(els.settingsCapacity.value||450);state.settings.haptics=els.settingsHaptics.checked;state.settings.weekendMode=els.settingsWeekendMode.checked;state.settings.theme=els.settingsTheme.value;state.settings.defaultProfile=els.settingsDefaultProfile.value;state.settings.privacyMode=els.settingsPrivacyMode.checked;saveAll();closeSheet(els.settingsSheet);render();toast('Ajustes guardados.');});
+els.settingsForm.addEventListener('submit',event=>{event.preventDefault();state.settings.name=els.settingsName.value.trim()||'Angel';state.settings.dailyCapacity=Number(els.settingsCapacity.value||450);state.settings.haptics=els.settingsHaptics.checked;state.settings.weekendMode=els.settingsWeekendMode.checked;state.settings.theme=els.settingsTheme.value;state.settings.defaultProfile=els.settingsDefaultProfile.value;state.settings.privacyMode=els.settingsPrivacyMode.checked;state.settings.intelligentMode=els.settingsIntelligentMode?.checked!==false;state.settings.bufferPercent=Number(els.settingsBuffer?.value||15);state.settings.maxHighPerDay=Number(els.settingsMaxHigh?.value||2);state.settings.workFreeWeekend=Boolean(els.settingsWorkFreeWeekend?.checked);state.settings.appearance=els.settingsAppearance?.value||'system';saveAll();closeSheet(els.settingsSheet);render();toast('Ajustes guardados.');});
+if(els.taskAdvancedToggle)els.taskAdvancedToggle.addEventListener('click',()=>setTaskAdvanced(els.taskAdvancedFields.hidden));
+if(els.taskDateCycle)els.taskDateCycle.addEventListener('click',cycleCompactDate);
+if(els.taskPriorityCycle)els.taskPriorityCycle.addEventListener('click',cycleCompactPriority);
+if(els.taskVoiceBtn)els.taskVoiceBtn.addEventListener('click',()=>startSpeechCapture(els.taskTitle));
+if(els.taskHistoryBtn)els.taskHistoryBtn.addEventListener('click',()=>{const id=els.taskEditId.value;if(id){closeSheet(els.taskSheet);setTimeout(()=>openTaskHistory(id),40);}});
+if(els.quickVoiceBtn)els.quickVoiceBtn.addEventListener('click',()=>startSpeechCapture(els.quickTaskInput));
+els.taskTitle.addEventListener('input',()=>{if(!els.taskEditId.value){applyCategorySuggestion();const parsed=parseNaturalTask(els.taskTitle.value);if(parsed.category)els.taskCategory.value=parsed.category;if(parsed.duration){ensureSelectOption(els.taskDuration,parsed.duration);els.taskDuration.value=String(parsed.duration);}if(parsed.scheduledDate)els.taskScheduledDate.value=parsed.scheduledDate;if(parsed.deadline)els.taskDeadline.value=parsed.deadline;if(parsed.priority)setChoice('priority',parsed.priority);if(parsed.energy)setChoice('energy',parsed.energy);if(parsed.recurrence)els.taskRecurrence.value=parsed.recurrence;if(parsed.project&&els.taskProject)els.taskProject.value=parsed.project;if(parsed.context&&els.taskContext)els.taskContext.value=parsed.context;syncCompactTaskMeta();updateCapacityPreview();}});
+els.taskScheduledDate.addEventListener('change',()=>{syncCompactTaskMeta();updateCapacityPreview();});els.taskDuration.addEventListener('change',updateCapacityPreview);
+if(els.planningBalanceBtn)els.planningBalanceBtn.addEventListener('click',applyWeekBalance);
+if(els.planningCleanBtn)els.planningCleanBtn.addEventListener('click',()=>{const stale=getStaleTasks().slice(0,8);if(!stale.length){toast('No hay pendientes antiguos que limpiar.');return;}showActionSheet(`${sheetHeader('Limpieza inteligente','Menos deuda de tareas')}<div class="action-list">${stale.map(t=>actionOption({icon:'spark',title:t.title,sub:getProcrastinationStep(t)||'Revisar',attrs:`data-procrastination="split" data-id="${t.id}"`})).join('')}</div>`);});
+if(els.newOutcomeBtn)els.newOutcomeBtn.addEventListener('click',openNewOutcome);
+if(els.openTrashBtn)els.openTrashBtn.addEventListener('click',openTrash);
+if(els.exportCsvBtn)els.exportCsvBtn.addEventListener('click',exportCSV);
+if(els.autoBackupBtn)els.autoBackupBtn.addEventListener('click',makeAutoBackup);
 els.resetAppBtn.addEventListener('click',openResetAppConfirmation);
-els.exportBackupBtn.addEventListener('click',exportBackup);els.importBackupBtn.addEventListener('click',()=>els.backupFileInput.click());els.backupFileInput.addEventListener('change',async()=>{const f=els.backupFileInput.files?.[0];if(f)await previewBackup(f);els.backupFileInput.value='';});els.localLockBtn.addEventListener('click',openLocalLockSetup);els.localUnlockBtn.addEventListener('click',unlockLocal);els.localLockPin.addEventListener('keydown',e=>{if(e.key==='Enter')unlockLocal();});
+els.exportBackupBtn.addEventListener('click',exportBackup);els.importBackupBtn.addEventListener('click',()=>els.backupFileInput.click());els.backupFileInput.addEventListener('change',async()=>{const f=els.backupFileInput.files?.[0];if(f)await previewBackup(f);els.backupFileInput.value='';});els.localLockBtn.addEventListener('click',openLocalLockSetup);els.localUnlockBtn.addEventListener('click',unlockLocal);els.localLockPin.addEventListener('keydown',e=>{if(e.key==='Enter')unlockLocal();});if(els.biometricSetupBtn)els.biometricSetupBtn.addEventListener('click',setupBiometric);if(els.localBiometricBtn)els.localBiometricBtn.addEventListener('click',unlockBiometric);
 els.syncSignInBtn.addEventListener('click',()=>signInSyncAccount().catch(error=>{console.error(error);setSyncStatus('error',firebaseErrorText(error));}));els.syncCreateBtn.addEventListener('click',()=>createSyncAccount().catch(error=>{console.error(error);setSyncStatus('error',firebaseErrorText(error));}));els.syncResetBtn.addEventListener('click',()=>resetSyncPassword().catch(error=>{console.error(error);toast(firebaseErrorText(error));}));els.syncNowBtn.addEventListener('click',()=>pullCloudNow().catch(error=>{console.error(error);setSyncStatus('error',firebaseErrorText(error));}));els.syncSignOutBtn.addEventListener('click',()=>signOutCloud().catch(error=>{console.error(error);setSyncStatus('error',firebaseErrorText(error));}));
 document.getElementById('googleSyncBtn').addEventListener('click',syncGoogleCalendar);document.getElementById('appleExportBtn').addEventListener('click',exportAppleICS);document.getElementById('icsImportBtn').addEventListener('click',()=>els.icsFileInput.click());els.icsFileInput.addEventListener('change',async()=>{const file=els.icsFileInput.files?.[0];if(file)await importICS(file);els.icsFileInput.value='';});els.installAppBtn.addEventListener('click',installPWA);
 
@@ -1580,6 +1847,11 @@ els.contextIsland.addEventListener('pointerup',()=>{if(islandHold){clearTimeout(
 window.addEventListener('online',()=>{updateSyncUI();if(isCloudConfigured()&&!state.sync.auth){initCloudSync().catch(()=>{});return;}if(state.sync.user){state.sync.forceRetry=true;syncLocalToFirebase().catch(()=>{});setTimeout(()=>pullCloudNow({silent:true}).catch(()=>{}),350);}});
 window.addEventListener('offline',()=>{if(state.sync.user)setSyncStatus('offline','Sin conexión · los cambios quedarán pendientes.');else updateSyncUI();});
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=4.2.0',{updateViaCache:'none'}).then(reg=>reg.update()).catch(error=>console.warn('Service worker:',error)));}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=5.0.0',{updateViaCache:'none'}).then(reg=>reg.update()).catch(error=>console.warn('Service worker:',error)));}
 
-updateLastOpened();ensureDailyFocus();render();checkReminders();updateSyncUI();setTimeout(()=>{if(state.security.enabled)showLocalLock();},250);initCloudSync().catch(error=>{console.error('Firebase sync:',error);setSyncStatus('error','La sincronización con Firebase no pudo iniciarse.');});
+function processLaunchAction(){
+  const u=new URL(location.href),action=u.searchParams.get('action');if(!action)return;
+  const clean=location.pathname+(location.hash||'');history.replaceState({},'',clean);
+  setTimeout(()=>{if(action==='new')openTaskSheet();else if(action==='now')openNowMode();else if(action==='search')openUniversalSearch();},350);
+}
+cleanupOldTrash();createWeeklySnapshot();updateLastOpened();ensureDailyFocus();render();checkReminders();updateSyncUI();processShareTarget();processLaunchAction();setTimeout(()=>{if(state.security.enabled||state.security.biometricCredentialId)showLocalLock();},250);initCloudSync().catch(error=>{console.error('Firebase sync:',error);setSyncStatus('error','La sincronización con Firebase no pudo iniciarse.');});

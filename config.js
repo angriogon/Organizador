@@ -1,4 +1,4 @@
-// Configuración del Organizador personal inteligente · v4.2
+// Configuración del Organizador personal inteligente · v5.0
 //
 // FIREBASE (sincronización iPhone ↔ Windows)
 // Datos de la Web App obtenidos desde Firebase Console.

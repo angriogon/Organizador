@@ -547,7 +547,7 @@ function startSpeechCapture(target){
   try{const rec=new SR();rec.lang='es-ES';rec.interimResults=false;rec.maxAlternatives=1;state.speech=rec;target?.closest('.quick-task-line,.quick-input-wrap')?.classList.add('listening');rec.onresult=e=>{const text=e.results?.[0]?.[0]?.transcript||'';if(text){target.value=(target.value?target.value+' ':'')+text;target.dispatchEvent(new Event('input',{bubbles:true}));}};rec.onend=()=>{target?.closest('.quick-task-line,.quick-input-wrap')?.classList.remove('listening');state.speech=null;};rec.onerror=()=>{target?.closest('.quick-task-line,.quick-input-wrap')?.classList.remove('listening');state.speech=null;};rec.start();}catch(_){toast('No se pudo iniciar el dictado.');}
 }
 function processShareTarget(){const u=new URL(location.href),text=[u.searchParams.get('title'),u.searchParams.get('text'),u.searchParams.get('url')].filter(Boolean).join(' ').trim();if(!text)return;history.replaceState({},'',location.pathname+location.hash);setTimeout(()=>{openQuickSheet();els.quickTaskInput.value=text;},400);}
-function applyAppearance(){const mode=state.settings.appearance||'system',dark=mode==='dark'||(mode==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.appearance=dark?'dark':'light';}
+function applyAppearance(){const mode=state.settings.appearance||'system',dark=mode==='dark'||(mode==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.appearance=dark?'dark':'light';const theme=document.querySelector('meta[name="theme-color"]');if(theme)theme.setAttribute('content',dark?'#101316':'#f7f8fa');}
 function cycleCompactDate(){const t=todayISO(),m=addDays(t,1),cur=els.taskScheduledDate.value;els.taskScheduledDate.value=cur===t?m:cur===m?'':t;syncCompactTaskMeta();updateCapacityPreview();}
 function cycleCompactPriority(){const order=['medium','high','low'],i=order.indexOf(els.taskPriority.value);setChoice('priority',order[(i+1)%order.length]);}
 function getSuggestedCategoryFromText(){const parsed=parseNaturalTask(els.taskTitle.value);return parsed.category||suggestCategoryForTitle(els.taskTitle.value);}
@@ -1015,7 +1015,8 @@ function renderHome() {
   else {const tomorrow=getDayLoad(addDays(today,1));els.adaptiveLine.textContent=`Mañana: ${tasksOn(addDays(today,1)).length} tareas · ${tomorrow.percent}%`;els.focusHeadingText.textContent='Antes de cerrar';}
   els.greeting.textContent=`${hour<12?'Buenos días':hour<20?'Buenas tardes':'Buenas noches'}, ${state.settings.name} 👋`;
   animateLoadPercent(load.percent);els.capacityRing.style.setProperty('--ring-angle',`${Math.min(360,load.percent*3.6)}deg`);els.loadBar.style.width=`${Math.min(100,load.percent)}%`;
-  els.topThreeList.innerHTML=focus.length?focus.map(renderFocusItem).join(''):'<div class="focus-empty">Nada imprescindible ahora mismo.</div>';
+  const pendingFocus=focus.filter(t=>!t.completedAt);
+  els.topThreeList.innerHTML=pendingFocus.length?pendingFocus.map((task,index)=>renderFocusItem(task,index)).join(''):(focus.length?'<div class="focus-empty focus-done-all">Tus 3 importantes están hechas ✓</div>':'<div class="focus-empty">Nada imprescindible ahora mismo.</div>');
   els.focusProgress.innerHTML=[0,1,2].map(i=>`<span class="progress-dot ${focus[i]?.completedAt?'done':''}"></span>`).join('');
   const next=getNextBestAction();els.startNextBtn.disabled=!next;els.startNextBtn.querySelector('span').textContent=state.ui.activeNowTaskId?'Continuar':'Empezar';
   els.lowEnergyBtn.classList.toggle('active',state.lowEnergyMode);

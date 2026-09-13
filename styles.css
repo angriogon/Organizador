@@ -933,3 +933,165 @@ body.modal-open { overscroll-behavior: none; }
 @media (max-width:390px){.quick-meta-row{grid-template-columns:1fr 1fr}.quick-task-line input{font-size:14px}.compact-task-header .section-kicker{display:none}}
 @media (orientation:landscape) and (max-height:520px) and (display-mode:standalone){.home-card{display:grid;grid-template-columns:1.05fr 1fr;column-gap:18px}.home-greeting,.day-status-row,.load-track{grid-column:1}.focus-heading,.focus-list,.focus-actions{grid-column:2}.focus-heading{grid-row:1;margin-top:0}.miniagenda,.gaps-row,.smart-recommendation{display:none!important}}
 @media (prefers-reduced-motion:reduce){.plan-day,.advanced-toggle svg{transition:none}.listening .voice-btn{animation:none}}
+
+
+/* =========================================================
+   v5.0.1 · correcciones visuales PWA/iOS
+   - dark mode coherente en todas las superficies
+   - ajustes sin footer flotante que tape contenido
+   - navegación y tarjetas legibles en standalone
+   ========================================================= */
+:root[data-appearance="dark"] {
+  --bg:#0f1215;
+  --surface:rgba(23,27,31,.96);
+  --surface-solid:#171b1f;
+  --text:#f2f4f5;
+  --muted:#98a1aa;
+  --soft:#7f8993;
+  --line:#2a3036;
+  --line-strong:#333a41;
+  --accent:#e9eef4;
+  --accent-soft:#262c32;
+  --shadow:0 16px 46px rgba(0,0,0,.22);
+  --shadow-soft:0 8px 24px rgba(0,0,0,.18);
+  color-scheme:dark;
+}
+:root[data-appearance="dark"] body {
+  background:radial-gradient(circle at 90% 0%,rgba(39,46,56,.34),transparent 28rem),radial-gradient(circle at 0% 100%,rgba(42,36,46,.22),transparent 28rem),#0f1215;
+  color:var(--text);
+}
+:root[data-appearance="dark"] .topbar h1,
+:root[data-appearance="dark"] .home-greeting h2,
+:root[data-appearance="dark"] .focus-heading h3,
+:root[data-appearance="dark"] .sheet-header h2,
+:root[data-appearance="dark"] .settings-section h3,
+:root[data-appearance="dark"] .sync-state-copy strong { color:#f2f4f5; }
+:root[data-appearance="dark"] .icon-btn,
+:root[data-appearance="dark"] .quiet-icon,
+:root[data-appearance="dark"] .nav-item.active,
+:root[data-appearance="dark"] .gap-chip,
+:root[data-appearance="dark"] .segmented .segment.active,
+:root[data-appearance="dark"] .voice-btn,
+:root[data-appearance="dark"] .space-card,
+:root[data-appearance="dark"] .connect-btn,
+:root[data-appearance="dark"] .sync-card,
+:root[data-appearance="dark"] .quick-task-line,
+:root[data-appearance="dark"] .mini-select,
+:root[data-appearance="dark"] .mini-chip,
+:root[data-appearance="dark"] .history-list>div,
+:root[data-appearance="dark"] .premium-insight,
+:root[data-appearance="dark"] .smart-list-grid button,
+:root[data-appearance="dark"] .premium-row,
+:root[data-appearance="dark"] .action-summary,
+:root[data-appearance="dark"] .space-load,
+:root[data-appearance="dark"] .toggle-row {
+  background:#20252a;
+  color:#eef1f3;
+  border-color:#2d343b;
+}
+:root[data-appearance="dark"] .icon-btn:hover,
+:root[data-appearance="dark"] .quiet-icon:hover,
+:root[data-appearance="dark"] .nav-item:hover { background:#262c32; color:#f3f5f6; }
+:root[data-appearance="dark"] .nav-item { color:#909aa4; }
+:root[data-appearance="dark"] .nav-item.active { color:#f4f6f7; }
+:root[data-appearance="dark"] .home-card,
+:root[data-appearance="dark"] .content-card,
+:root[data-appearance="dark"] .smart-results,
+:root[data-appearance="dark"] .planning-studio,
+:root[data-appearance="dark"] .premium-panel,
+:root[data-appearance="dark"] .modal-layer .sheet,
+:root[data-appearance="dark"] .side-nav {
+  background:#171b1f;
+  border-color:#282e34;
+  color:#f2f4f5;
+  box-shadow:0 16px 46px rgba(0,0,0,.2);
+}
+:root[data-appearance="dark"] .home-card::before { opacity:.72; }
+:root[data-appearance="dark"] .status-ring { background:conic-gradient(var(--load-tone,#677583) var(--ring-angle,0deg),#292f35 0); }
+:root[data-appearance="dark"] .status-ring::after { background:#171b1f; }
+:root[data-appearance="dark"] .load-track,
+:root[data-appearance="dark"] .plan-load { background:#2b3137; }
+:root[data-appearance="dark"] .progress-dot { background:#3a424a; }
+:root[data-appearance="dark"] .progress-dot.done { background:#a6b0ba; }
+:root[data-appearance="dark"] .focus-row { border-top-color:#292f35; }
+:root[data-appearance="dark"] .focus-row .swipe-content,
+:root[data-appearance="dark"] .task-item .swipe-content {
+  background:#1d2227;
+  border-color:#292f35;
+  color:#eef1f3;
+}
+:root[data-appearance="dark"] .focus-row.is-done .focus-title { color:#7f8993; }
+:root[data-appearance="dark"] .focus-done-all { color:#aeb7c0; padding:14px 2px 8px; }
+:root[data-appearance="dark"] .miniagenda { border-top-color:#2a3036; }
+:root[data-appearance="dark"] .miniagenda-icon { background:#242a30; color:#9ba5af; }
+:root[data-appearance="dark"] .smart-recommendation { background:#22282e; color:#b7c0c8; }
+:root[data-appearance="dark"] .smart-recommendation.warning { background:#302a20; color:#d4bc8d; }
+:root[data-appearance="dark"] .smart-recommendation.danger { background:#302324; color:#d0a19d; }
+:root[data-appearance="dark"] .context-island { background:#e8edf2; color:#20262c; box-shadow:0 12px 34px rgba(0,0,0,.3); }
+:root[data-appearance="dark"] .fab { background:#f2f4f6; color:#222930; border-color:#d9dee3; }
+:root[data-appearance="dark"] .fab-menu { background:#1b2025; border-color:#2d343a; color:#eef1f3; }
+:root[data-appearance="dark"] .fab-menu button:hover { background:#252b31; }
+:root[data-appearance="dark"] .segmented { background:#20252a; }
+:root[data-appearance="dark"] .segmented .segment { color:#909aa4; }
+:root[data-appearance="dark"] .segmented .segment.active { color:#f0f2f4; box-shadow:none; }
+:root[data-appearance="dark"] .field input,
+:root[data-appearance="dark"] .field select,
+:root[data-appearance="dark"] .split-inputs input {
+  background:#20252a;
+  color:#f0f2f4;
+  border-color:#30373e;
+}
+:root[data-appearance="dark"] .field input::placeholder,
+:root[data-appearance="dark"] .quick-task-line input::placeholder { color:#707a84; }
+:root[data-appearance="dark"] .quick-task-line input { color:#f2f4f5; }
+:root[data-appearance="dark"] .modal-backdrop { background:rgba(0,0,0,.62); }
+:root[data-appearance="dark"] .sheet-handle { background:#3b434b; }
+:root[data-appearance="dark"] .settings-section { border-top-color:#2a3036; }
+:root[data-appearance="dark"] .sync-card { background:#1d2227; }
+:root[data-appearance="dark"] .sync-state-copy span,
+:root[data-appearance="dark"] .connect-btn span,
+:root[data-appearance="dark"] .toggle-row span,
+:root[data-appearance="dark"] .micro-note { color:#8f99a3; }
+:root[data-appearance="dark"] .sheet-actions { background:transparent; }
+:root[data-appearance="dark"] .ghost-btn { background:#23292f; color:#b4bdc5; border-color:#2e353c; }
+:root[data-appearance="dark"] .primary-btn { background:#e9edf2; color:#20262c; }
+:root[data-appearance="dark"] .now-mode { background:rgba(15,18,21,.99); color:#f2f4f5; }
+:root[data-appearance="dark"] .now-close,
+:root[data-appearance="dark"] .now-mark { background:#20252a; color:#c2c9cf; }
+:root[data-appearance="dark"] .privacy-curtain,
+:root[data-appearance="dark"] .local-lock-screen { background:#0f1215; color:#f2f4f5; }
+:root[data-appearance="dark"] .calendar-day { background:rgba(29,34,39,.72); }
+:root[data-appearance="dark"] .plan-day { background:#1c2126; border-color:#2a3137; }
+:root[data-appearance="dark"] .plan-day.over { background:#2b2020; border-color:#4b3030; }
+
+/* El footer sticky de Ajustes era el responsable del bloque blanco que tapaba
+   Sincronización en iPhone. En Ajustes se deja dentro del flujo normal y
+   mantenemos la X siempre accesible mediante cabecera sticky. */
+@media (max-width:760px) {
+  .settings-sheet .sheet-body { padding-bottom:calc(22px + var(--safe-bottom)); }
+  .settings-sheet .sheet-header {
+    position:sticky;
+    top:-9px;
+    z-index:6;
+    padding:9px 0 10px;
+    background:linear-gradient(#fff 82%,rgba(255,255,255,0));
+  }
+  .settings-sheet .sheet-actions {
+    position:static;
+    bottom:auto;
+    padding:12px 0 0;
+    background:transparent;
+  }
+  :root[data-appearance="dark"] .settings-sheet .sheet-header {
+    background:linear-gradient(#171b1f 82%,rgba(23,27,31,0));
+  }
+  :root[data-appearance="dark"] .side-nav {
+    background:rgba(23,27,31,.94)!important;
+    border-color:#2a3036;
+  }
+}
+
+@media (display-mode:standalone) and (max-width:760px) {
+  :root[data-appearance="dark"] .side-nav { background:rgba(23,27,31,.94)!important; }
+  :root[data-appearance="dark"] .nav-item.active { background:#262c32; color:#f5f6f7; }
+}

@@ -5,7 +5,7 @@ const LEGACY_STORAGE_KEY = 'opi_tasks_v1';
 const SETTINGS_KEY = 'opi_settings_v2';
 const EXTERNAL_EVENTS_KEY = 'opi_external_events_v2';
 const UI_KEY = 'opi_ui_v3';
-const CACHE_VERSION = '5.0.2';
+const CACHE_VERSION = '5.0.3';
 const SYNC_META_KEY = 'opi_sync_meta_v41';
 const CLOUD_BACKUP_PREFIX = 'opi_prefirebase_backup_v41_';
 const CLOUD_SCHEMA_VERSION = 5;
@@ -1163,6 +1163,10 @@ function openSheet(el) {
   // Forzamos layout antes de la clase para conservar la microanimación de entrada.
   void el.offsetWidth;
   el.classList.add('is-open');
+  // Protege la hoja recién abierta del pointerup/click que pertenece al gesto
+  // que la abrió. Chromium en modo PWA puede retargetear ese final de gesto al
+  // backdrop cuando el menú FAB desaparece, provocando un cierre inmediato.
+  state.modalIgnoreBackdropUntil=performance.now()+360;
   syncModalLock();
 }
 function closeSheet(el) {
@@ -1231,6 +1235,7 @@ function showActionSheet(html){els.actionSheetContent.innerHTML=html;openSheet(e
 function openWhatsNew(){
   showActionSheet(`${sheetHeader('Novedades','Cambios recientes')}
     <div class="release-notes">
+      <section><strong>5.0.3</strong><span>Menú del botón + estabilizado en PWA: las opciones se ejecutan al finalizar el toque y ya no se cierran al abrirse.</span></section>
       <section><strong>5.0.2</strong><span>Accesos del botón + corregidos en pulsación larga · panel de novedades.</span></section>
       <section><strong>5.0.1</strong><span>Modo oscuro y PWA pulidos · Ajustes y tarjetas con mejor contraste.</span></section>
       <section><strong>5.0</strong><span>Planning Studio · inteligencia premium · creación de tareas compacta.</span></section>
@@ -1756,15 +1761,44 @@ els.fab.addEventListener('pointerup',()=>{
 els.fab.addEventListener('pointercancel',cancelFabHold);
 els.fab.addEventListener('lostpointercapture',cancelFabHold);
 
-// Acción directa y fiable del menú del FAB en táctil.
+// Menú del FAB: armamos la opción en pointerdown y la ejecutamos en pointerup.
+// En la 5.0.2 la acción se abría en pointerdown: en algunas PWA (especialmente
+// Windows/Chromium) el pointerup del mismo toque podía caer sobre el backdrop
+// recién creado y cerrarlo inmediatamente. Ejecutar al finalizar el gesto evita
+// ese click-through sin volver a depender del click sintético de Safari iOS.
+let pendingFabPointer=null;
 els.fabMenu.addEventListener('pointerdown',event=>{
   const option=event.target.closest?.('[data-fab-action]');
   if(!option)return;
+  if(event.button!=null&&event.button!==0)return;
   event.preventDefault();
   event.stopPropagation();
-  option.__opiFabHandledUntil=performance.now()+700;
-  runFabAction(option.dataset.fabAction);
+  pendingFabPointer={pointerId:event.pointerId,action:option.dataset.fabAction,option};
+  option.classList.add('is-pressed');
 },{capture:true});
+
+els.fabMenu.addEventListener('pointerup',event=>{
+  const option=event.target.closest?.('[data-fab-action]');
+  const pending=pendingFabPointer;
+  if(!pending || pending.pointerId!==event.pointerId)return;
+  event.preventDefault();
+  event.stopPropagation();
+  pending.option?.classList.remove('is-pressed');
+  pendingFabPointer=null;
+  if(!option || option!==pending.option)return;
+  option.__opiFabHandledUntil=performance.now()+800;
+  state.blockClickThroughUntil=performance.now()+220;
+  runFabAction(pending.action);
+},{capture:true});
+
+function cancelPendingFabPointer(event){
+  if(!pendingFabPointer)return;
+  if(event?.pointerId!=null && pendingFabPointer.pointerId!==event.pointerId)return;
+  pendingFabPointer.option?.classList.remove('is-pressed');
+  pendingFabPointer=null;
+}
+els.fabMenu.addEventListener('pointercancel',cancelPendingFabPointer,{capture:true});
+els.fabMenu.addEventListener('lostpointercapture',cancelPendingFabPointer,{capture:true});
 
 els.fabMenu.addEventListener('click',event=>{
   const option=event.target.closest?.('[data-fab-action]');
@@ -1772,6 +1806,7 @@ els.fabMenu.addEventListener('click',event=>{
   event.preventDefault();
   event.stopPropagation();
   if(performance.now()<(option.__opiFabHandledUntil||0))return;
+  // Respaldo para teclado, VoiceOver y navegadores que no emitan Pointer Events.
   runFabAction(option.dataset.fabAction);
 },{capture:true});
 
@@ -1908,7 +1943,7 @@ els.contextIsland.addEventListener('pointerup',()=>{if(islandHold){clearTimeout(
 window.addEventListener('online',()=>{updateSyncUI();if(isCloudConfigured()&&!state.sync.auth){initCloudSync().catch(()=>{});return;}if(state.sync.user){state.sync.forceRetry=true;syncLocalToFirebase().catch(()=>{});setTimeout(()=>pullCloudNow({silent:true}).catch(()=>{}),350);}});
 window.addEventListener('offline',()=>{if(state.sync.user)setSyncStatus('offline','Sin conexión · los cambios quedarán pendientes.');else updateSyncUI();});
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=5.0.2',{updateViaCache:'none'}).then(reg=>reg.update()).catch(error=>console.warn('Service worker:',error)));}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=5.0.3',{updateViaCache:'none'}).then(reg=>reg.update()).catch(error=>console.warn('Service worker:',error)));}
 
 function processLaunchAction(){
   const u=new URL(location.href),action=u.searchParams.get('action');if(!action)return;

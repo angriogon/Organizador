@@ -1107,3 +1107,7 @@ body.modal-open { overscroll-behavior: none; }
   .fab-menu { width:194px; }
   .fab-menu button { min-height:48px; }
 }
+
+/* v5.0.3 · menú FAB estable en PWA */
+.fab-menu button.is-pressed { background: #eef2f4; transform: scale(.985); }
+:root[data-appearance="dark"] .fab-menu button.is-pressed { background:#2a3137; }

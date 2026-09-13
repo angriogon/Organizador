@@ -1,8 +1,8 @@
-# Organizador personal inteligente · v4.1
+# Organizador personal inteligente · v4.2
 
 Versión preparada para GitHub Pages y PWA con **sincronización en tiempo real entre iPhone y Windows mediante Firebase Authentication + Cloud Firestore**.
 
-## Qué cambia en v4.1
+## Qué cambia en v4.2
 
 - Se elimina la dependencia de Supabase, SMTP y códigos OTP.
 - Acceso simple mediante **email + contraseña**.
@@ -63,7 +63,7 @@ Las reglas impiden que una cuenta acceda al UID de otra.
 
 ## Primera migración
 
-Inicia sesión o crea la cuenta **primero en el dispositivo que ya contiene tus datos correctos**. Si la nube todavía está vacía, v4.1 sube esa copia local. El segundo dispositivo descarga la nube al iniciar sesión con la misma cuenta.
+Inicia sesión o crea la cuenta **primero en el dispositivo que ya contiene tus datos correctos**. Si la nube todavía está vacía, v4.2 sube esa copia local. El segundo dispositivo descarga la nube al iniciar sesión con la misma cuenta.
 
 Antes de reemplazar una copia local por una nube ya existente, la app guarda una copia de seguridad interna en `localStorage`.
 
@@ -73,8 +73,13 @@ Cada tarea es independiente. Si editas tareas distintas simultáneamente, ambos 
 
 ## Firebase SDK
 
-La app carga Firebase solo cuando `config.js` contiene una configuración válida. La versión usada por v4.1 es Firebase JS SDK **12.18.0** mediante los paquetes compat oficiales de `gstatic`, para conservar la arquitectura JavaScript actual sin añadir un bundler.
+La app carga Firebase solo cuando `config.js` contiene una configuración válida. La versión usada por v4.2 es Firebase JS SDK **12.18.0** mediante los paquetes compat oficiales de `gstatic`, para conservar la arquitectura JavaScript actual sin añadir un bundler.
 
 ## GitHub Pages
 
 Sube el contenido del ZIP directamente a la raíz del repositorio y comprueba que `index.html` quede en la raíz. No necesitas Firebase Hosting.
+
+
+## v4.2 · Plan resiliente y aprendizaje local
+
+Esta versión añade plan resiliente, predicción local de duración, carga mental, perfiles de día, modo "Hoy voy justa", Inbox invisible, recuperación tras ausencia, tareas envejecidas, secuencias cortas, búsqueda universal, paleta de comandos, backups/restauración segura, schemaVersion 3, PIN local opcional, privacidad, mapa semanal de capacidad y mejoras del Modo Ahora. Firebase se mantiene como capa de sincronización. El aprendizaje de duración y el PIN permanecen locales por privacidad.

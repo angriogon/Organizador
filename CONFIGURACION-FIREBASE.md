@@ -1,4 +1,4 @@
-# Configuración exacta de Firebase · Organizador v4.1
+# Configuración exacta de Firebase · Organizador v4.2
 
 Esta versión usa **Firebase Authentication + Cloud Firestore** para que la web app añadida a la pantalla de inicio del iPhone y la PWA de Windows compartan las mismas tareas en tiempo real.
 
@@ -56,7 +56,7 @@ No cierres esta información hasta haber rellenado `config.js`.
 
 # PANTALLA 3 · Rellenar `config.js`
 
-En el ZIP v4.1 abre el archivo `config.js` con un editor de texto.
+En el ZIP v4.2 abre el archivo `config.js` con un editor de texto.
 
 Verás:
 
@@ -111,7 +111,7 @@ La app utiliza una contraseña normal, así que no necesitas SMTP ni códigos OT
 
 ### Política de contraseña
 
-En **Authentication → Settings / Configuración → Password policy / Política de contraseña** puedes dejar la política predeterminada. Firebase admite un mínimo predeterminado de 6 caracteres y la app v4.1 también exige al menos 6.
+En **Authentication → Settings / Configuración → Password policy / Política de contraseña** puedes dejar la política predeterminada. Firebase admite un mínimo predeterminado de 6 caracteres y la app v4.2 también exige al menos 6.
 
 ---
 
@@ -184,7 +184,7 @@ Estas reglas son esenciales: cada cuenta solo puede leer y modificar los documen
 
 No crees `users`, `tasks` ni documentos a mano en Firestore.
 
-Cuando inicies sesión desde la app por primera vez, v4.1 creará automáticamente una estructura similar a:
+Cuando inicies sesión desde la app por primera vez, v4.2 creará automáticamente una estructura similar a:
 
 ```text
 users
@@ -201,9 +201,9 @@ Cada tarea es un documento independiente. Esto permite que completar una tarea e
 
 ---
 
-# PANTALLA 9 · Subir v4.1 a GitHub
+# PANTALLA 9 · Subir v4.2 a GitHub
 
-1. Descomprime `organizador-personal-inteligente-v4.1-github.zip`.
+1. Descomprime `organizador-personal-inteligente-v4.2-github.zip`.
 2. Edita `config.js` con tus datos de Firebase **antes** de subirlo.
 3. En tu repositorio GitHub elimina los archivos antiguos de la versión anterior o sustitúyelos todos por los del ZIP.
 4. Sube **el contenido del ZIP**, dejando `index.html` directamente en la raíz.
@@ -232,7 +232,7 @@ Este paso es importante para migrar tus tareas actuales.
 
 Si tus tareas reales están ahora mismo en el iPhone:
 
-1. Publica v4.1 en GitHub Pages.
+1. Publica v4.2 en GitHub Pages.
 2. Abre primero la app en el **iPhone**.
 3. Entra en **Ajustes → Sincronización**.
 4. Escribe tu email.
@@ -246,7 +246,7 @@ Como Firebase estará vacío, ese primer dispositivo subirá automáticamente la
 
 # PANTALLA 11 · Conectar Windows
 
-1. Abre la PWA de Windows actualizada a v4.1.
+1. Abre la PWA de Windows actualizada a v4.2.
 2. Ve a **Ajustes → Sincronización**.
 3. Escribe **el mismo email**.
 4. Escribe **la misma contraseña**.
@@ -311,7 +311,7 @@ Comprueba:
 
 1. que ambas usan el mismo email;
 2. que ambas están online;
-3. que la versión publicada es v4.1;
+3. que la versión publicada es v4.2;
 4. que Firestore Rules están publicadas;
 5. cierra y vuelve a abrir la PWA para que el Service Worker cargue la nueva versión si venías de v4.0/v3.x.
 
@@ -323,7 +323,7 @@ En iPhone cierra completamente la web app y vuelve a abrirla. Si siguiera anclad
 
 # Archivos que NO debes subir nunca a GitHub
 
-Esta v4.1 no necesita ninguno de estos archivos, pero si algún día Firebase te los ofrece para un servidor, no los publiques:
+Esta v4.2 no necesita ninguno de estos archivos, pero si algún día Firebase te los ofrece para un servidor, no los publiques:
 
 - service-account JSON;
 - claves privadas;

@@ -5,7 +5,7 @@ const LEGACY_STORAGE_KEY = 'opi_tasks_v1';
 const SETTINGS_KEY = 'opi_settings_v2';
 const EXTERNAL_EVENTS_KEY = 'opi_external_events_v2';
 const UI_KEY = 'opi_ui_v3';
-const CACHE_VERSION = '5.0.0';
+const CACHE_VERSION = '5.0.2';
 const SYNC_META_KEY = 'opi_sync_meta_v41';
 const CLOUD_BACKUP_PREFIX = 'opi_prefirebase_backup_v41_';
 const CLOUD_SCHEMA_VERSION = 5;
@@ -1227,6 +1227,26 @@ function openReminderSheet(){els.reminderForm.reset();els.reminderDate.value=tod
 function sheetHeader(kicker,title){return `<div class="sheet-handle"></div><div class="sheet-header"><div><span class="section-kicker">${escapeHTML(kicker)}</span><h2 class="action-title">${escapeHTML(title)}</h2></div><button type="button" class="icon-btn subtle" data-close-action>${ICON('close')}</button></div>`;}
 function actionOption({icon,title,sub='',end='',attrs='',className=''}){return `<button class="action-option ${className}" ${attrs}><span class="action-icon">${ICON(icon)}</span><span><strong>${escapeHTML(title)}</strong>${sub?`<small>${escapeHTML(sub)}</small>`:''}</span>${end?`<span class="action-end">${escapeHTML(end)}</span>`:'<span></span>'}</button>`;}
 function showActionSheet(html){els.actionSheetContent.innerHTML=html;openSheet(els.actionSheet);}
+
+function openWhatsNew(){
+  showActionSheet(`${sheetHeader('Novedades','Cambios recientes')}
+    <div class="release-notes">
+      <section><strong>5.0.2</strong><span>Accesos del botón + corregidos en pulsación larga · panel de novedades.</span></section>
+      <section><strong>5.0.1</strong><span>Modo oscuro y PWA pulidos · Ajustes y tarjetas con mejor contraste.</span></section>
+      <section><strong>5.0</strong><span>Planning Studio · inteligencia premium · creación de tareas compacta.</span></section>
+      <section><strong>4.2</strong><span>Plan resiliente · predicción personal · backups, perfiles y modo Ahora.</span></section>
+    </div>
+    <div class="sheet-actions"><button class="primary-btn" data-close-action>Entendido</button></div>`);
+}
+
+function runFabAction(action){
+  els.fabMenu.hidden=true;
+  els.fab.setAttribute('aria-expanded','false');
+  state.fabLongPressed=false;
+  if(action==='task')openTaskSheet();
+  else if(action==='quick')openQuickSheet();
+  else if(action==='reminder')openReminderSheet();
+}
 function openTaskActions(id) {
   const task=state.tasks.find(t=>t.id===id);if(!task)return;
   showActionSheet(`${sheetHeader('Tarea',task.title)}<p class="action-meta">${CATEGORY_SHORT[task.category]} · ${formatMinutes(task.duration)}${task.snoozeCount?` · ${task.snoozeCount} aplazamientos`:''}</p><div class="action-list">
@@ -1710,11 +1730,50 @@ document.addEventListener('pointerup',event=>{
   runDataCommand(command);
 },{capture:true});
 
-/* FAB: toque = tarea; pulsación larga = tres accesos rápidos. */
+/* FAB: toque = tarea; pulsación larga = tres accesos rápidos.
+   Los accesos del menú se resuelven en pointerdown para iOS/PWA: después de una
+   pulsación larga Safari puede no sintetizar un click fiable sobre el segundo toque. */
 let fabTimer=null;
-els.fab.addEventListener('pointerdown',()=>{state.fabLongPressed=false;els.fab.classList.add('holding');fabTimer=setTimeout(()=>{state.fabLongPressed=true;els.fabMenu.hidden=false;buzz(8);},430);});
-els.fab.addEventListener('pointerup',()=>{clearTimeout(fabTimer);els.fab.classList.remove('holding');if(!state.fabLongPressed)openTaskSheet();setTimeout(()=>state.fabLongPressed=false,50);});
-els.fab.addEventListener('pointercancel',()=>{clearTimeout(fabTimer);els.fab.classList.remove('holding');});
+function cancelFabHold(){clearTimeout(fabTimer);fabTimer=null;els.fab.classList.remove('holding');}
+els.fab.addEventListener('pointerdown',event=>{
+  if(event.button!=null&&event.button!==0)return;
+  state.fabLongPressed=false;
+  els.fab.classList.add('holding');
+  clearTimeout(fabTimer);
+  fabTimer=setTimeout(()=>{
+    state.fabLongPressed=true;
+    els.fabMenu.hidden=false;
+    els.fab.setAttribute('aria-expanded','true');
+    buzz(8);
+  },430);
+});
+els.fab.addEventListener('pointerup',()=>{
+  const wasLong=state.fabLongPressed;
+  cancelFabHold();
+  if(!wasLong)openTaskSheet();
+  else setTimeout(()=>{state.fabLongPressed=false;},180);
+});
+els.fab.addEventListener('pointercancel',cancelFabHold);
+els.fab.addEventListener('lostpointercapture',cancelFabHold);
+
+// Acción directa y fiable del menú del FAB en táctil.
+els.fabMenu.addEventListener('pointerdown',event=>{
+  const option=event.target.closest?.('[data-fab-action]');
+  if(!option)return;
+  event.preventDefault();
+  event.stopPropagation();
+  option.__opiFabHandledUntil=performance.now()+700;
+  runFabAction(option.dataset.fabAction);
+},{capture:true});
+
+els.fabMenu.addEventListener('click',event=>{
+  const option=event.target.closest?.('[data-fab-action]');
+  if(!option)return;
+  event.preventDefault();
+  event.stopPropagation();
+  if(performance.now()<(option.__opiFabHandledUntil||0))return;
+  runFabAction(option.dataset.fabAction);
+},{capture:true});
 
 /* Eventos de interfaz delegados. */
 document.addEventListener('click',event=>{
@@ -1734,8 +1793,8 @@ document.addEventListener('click',event=>{
   if(clicksAreSuppressed() && event.target.closest?.('[data-open-task], .swipe-row')){event.preventDefault();event.stopPropagation();return;}
 
   const routeBtn=event.target.closest('[data-route]');if(routeBtn){state.route=routeBtn.dataset.route;state.lowEnergyMode=false;closeSmartResults();resetRevealed();render();return;}
-  const fabAction=event.target.closest('[data-fab-action]');if(fabAction){els.fabMenu.hidden=true;if(fabAction.dataset.fabAction==='task')openTaskSheet();if(fabAction.dataset.fabAction==='quick')openQuickSheet();if(fabAction.dataset.fabAction==='reminder')openReminderSheet();return;}
-  if(!event.target.closest('.fab-wrap'))els.fabMenu.hidden=true;
+  const fabAction=event.target.closest('[data-fab-action]');if(fabAction){if(performance.now()<(fabAction.__opiFabHandledUntil||0))return;runFabAction(fabAction.dataset.fabAction);return;}
+  if(!event.target.closest('.fab-wrap')){els.fabMenu.hidden=true;els.fab.setAttribute('aria-expanded','false');}
   const openTask=event.target.closest('[data-open-task]');if(openTask){openTaskActions(openTask.dataset.openTask);return;}
   const calendarDate=event.target.closest('[data-calendar-date]');if(calendarDate){state.calendarSelectedDate=calendarDate.dataset.calendarDate;state.calendarCursor=startOfMonth(parseISODate(state.calendarSelectedDate));renderCalendar();return;}
   const gap=event.target.closest('[data-gap-minutes]');if(gap){showQuickTime(Number(gap.dataset.gapMinutes));return;}
@@ -1762,6 +1821,7 @@ document.querySelectorAll('[data-task-filter]').forEach(btn=>btn.addEventListene
 document.querySelectorAll('[data-choice-group] button').forEach(btn=>btn.addEventListener('click',()=>{const group=btn.closest('[data-choice-group]').dataset.choiceGroup;setChoice(group,btn.dataset.value);}));
 
 document.getElementById('openCalendar').addEventListener('click',()=>{state.lowEnergyMode=false;state.route='calendar';state.calendarSelectedDate=todayISO();state.calendarCursor=startOfMonth(new Date());render();});
+document.getElementById('openWhatsNew').addEventListener('click',openWhatsNew);
 document.getElementById('homeCalendarShortcut').addEventListener('click',()=>{state.lowEnergyMode=false;state.route='calendar';render();});
 els.miniAgendaOpen.addEventListener('click',()=>{state.lowEnergyMode=false;state.route='calendar';render();});
 document.getElementById('openSettingsSide').addEventListener('click',openSettings);
@@ -1848,7 +1908,7 @@ els.contextIsland.addEventListener('pointerup',()=>{if(islandHold){clearTimeout(
 window.addEventListener('online',()=>{updateSyncUI();if(isCloudConfigured()&&!state.sync.auth){initCloudSync().catch(()=>{});return;}if(state.sync.user){state.sync.forceRetry=true;syncLocalToFirebase().catch(()=>{});setTimeout(()=>pullCloudNow({silent:true}).catch(()=>{}),350);}});
 window.addEventListener('offline',()=>{if(state.sync.user)setSyncStatus('offline','Sin conexión · los cambios quedarán pendientes.');else updateSyncUI();});
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=5.0.0',{updateViaCache:'none'}).then(reg=>reg.update()).catch(error=>console.warn('Service worker:',error)));}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=5.0.2',{updateViaCache:'none'}).then(reg=>reg.update()).catch(error=>console.warn('Service worker:',error)));}
 
 function processLaunchAction(){
   const u=new URL(location.href),action=u.searchParams.get('action');if(!action)return;

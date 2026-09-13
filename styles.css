@@ -1095,3 +1095,15 @@ body.modal-open { overscroll-behavior: none; }
   :root[data-appearance="dark"] .side-nav { background:rgba(23,27,31,.94)!important; }
   :root[data-appearance="dark"] .nav-item.active { background:#262c32; color:#f5f6f7; }
 }
+
+/* v5.0.2 · FAB táctil robusto + novedades */
+.fab-menu { pointer-events:auto; z-index:3; }
+.fab-menu button { min-height:46px; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.release-notes { display:grid; gap:8px; margin:8px 0 2px; }
+.release-notes section { padding:11px 12px; border-radius:14px; background:var(--premium-soft,#f5f6f7); display:grid; gap:3px; }
+.release-notes strong { font-size:11px; color:var(--premium-ink,#242b33); }
+.release-notes span { font-size:10.5px; line-height:1.4; color:var(--premium-muted,#8b949e); }
+@media (max-width:760px){
+  .fab-menu { width:194px; }
+  .fab-menu button { min-height:48px; }
+}

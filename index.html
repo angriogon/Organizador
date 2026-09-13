@@ -10,8 +10,8 @@
   <meta name="apple-mobile-web-app-title" content="Organizador" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="format-detection" content="telephone=no" />
-  <title>Organizador personal inteligente · 5.0.1</title>
-  <link rel="manifest" href="manifest.webmanifest?v=5.0.1" />
+  <title>Organizador personal inteligente · 5.0.2</title>
+  <link rel="manifest" href="manifest.webmanifest?v=5.0.2" />
   <link rel="icon" type="image/x-icon" href="favicon-v313.ico" sizes="any" />
   <link rel="shortcut icon" type="image/x-icon" href="favicon-v313.ico" />
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32-v313.png" />
@@ -20,8 +20,8 @@
   <link rel="apple-touch-icon-precomposed" sizes="180x180" href="icons/apple-touch-icon-v313.png" />
   <meta name="msapplication-TileColor" content="#07121f" />
   <meta name="msapplication-TileImage" content="icons/icon-512-v313.png" />
-  <meta name="msapplication-config" content="browserconfig.xml?v=5.0.1" />
-  <link rel="stylesheet" href="styles.css?v=5.0.1" />
+  <meta name="msapplication-config" content="browserconfig.xml?v=5.0.2" />
+  <link rel="stylesheet" href="styles.css?v=5.0.2" />
 </head>
 <body>
   <!-- Sprite SVG local: iconografía consistente, sin librerías externas. -->
@@ -89,6 +89,7 @@
         <div class="top-actions">
           <button class="sync-issue-badge" id="syncIssueBadge" hidden aria-label="Problema de sincronización"><svg><use href="#i-cloud"/></svg><span>Sync</span></button>
           <button class="icon-btn" id="openCalendar" aria-label="Abrir calendario" title="Calendario"><svg><use href="#i-calendar"/></svg></button>
+          <button class="icon-btn" id="openWhatsNew" aria-label="Ver novedades" title="Novedades"><svg><use href="#i-history"/></svg></button>
           <button class="icon-btn" id="openSettingsTop" aria-label="Abrir ajustes" title="Ajustes"><svg><use href="#i-settings"/></svg></button>
         </div>
       </header>
@@ -223,7 +224,7 @@
       <button data-fab-action="reminder"><svg><use href="#i-bell"/></svg><span>Recordatorio</span></button>
       <button data-fab-action="task"><svg><use href="#i-plus"/></svg><span>Nueva tarea</span></button>
     </div>
-    <button class="fab" id="fab" aria-label="Nueva tarea. Mantén pulsado para más opciones" title="Nueva tarea"><svg><use href="#i-plus"/></svg></button>
+    <button class="fab" id="fab" aria-expanded="false" aria-label="Nueva tarea. Mantén pulsado para más opciones" title="Nueva tarea"><svg><use href="#i-plus"/></svg></button>
   </div>
 
   <!-- Bottom navigation en móvil; el mismo nav lateral se transforma con CSS. -->
@@ -364,7 +365,7 @@
   <div class="undo-bar" id="undoBar" role="status" aria-live="polite" hidden><span id="undoText">Tarea completada</span><button id="undoBtn">Deshacer</button></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="config.js?v=5.0.1"></script>
-  <script src="app.js?v=5.0.1"></script>
+  <script src="config.js?v=5.0.2"></script>
+  <script src="app.js?v=5.0.2"></script>
 </body>
 </html>

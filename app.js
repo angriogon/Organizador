@@ -5,7 +5,7 @@ const LEGACY_STORAGE_KEY = 'opi_tasks_v1';
 const SETTINGS_KEY = 'opi_settings_v2';
 const EXTERNAL_EVENTS_KEY = 'opi_external_events_v2';
 const UI_KEY = 'opi_ui_v3';
-const CACHE_VERSION = '5.0.4';
+const CACHE_VERSION = '5.0.5';
 const SYNC_META_KEY = 'opi_sync_meta_v41';
 const CLOUD_BACKUP_PREFIX = 'opi_prefirebase_backup_v41_';
 const CLOUD_SCHEMA_VERSION = 5;
@@ -482,7 +482,17 @@ function getRecommendation() {
    aprendizaje personal. Nada de esto bloquea las acciones básicas ni requiere IA.
 ---------------------------------------------------------------------------- */
 function appendTaskHistory(task,type,before=null){
-  if(!task)return;task.history=[...(task.history||[]),{type,at:new Date().toISOString(),deviceId:state.sync?.deviceId||'',before:before?{title:before.title,scheduledDate:before.scheduledDate,priority:before.priority,category:before.category}:undefined}].slice(-20);
+  if(!task)return;
+  const entry={type,at:new Date().toISOString(),deviceId:state.sync?.deviceId||''};
+  if(before){
+    entry.before={
+      title:before.title||'',
+      scheduledDate:before.scheduledDate||'',
+      priority:before.priority||'medium',
+      category:before.category||'personal'
+    };
+  }
+  task.history=[...(task.history||[]),entry].slice(-20);
 }
 function findFlexibleRecurrenceDate(task,base){
   const start=addDays(base,1);let best=start,bestLoad=Infinity;
@@ -661,15 +671,26 @@ function backupLocalBeforeCloud(userId) {
     }
   } catch (_) {}
 }
-function taskForCloud(task) { return normalizeTask(task); }
+function stripUndefinedDeep(value) {
+  if (Array.isArray(value)) return value.filter(item => item !== undefined).map(stripUndefinedDeep);
+  if (value && typeof value === 'object') {
+    const clean = {};
+    for (const [key, item] of Object.entries(value)) {
+      if (item !== undefined) clean[key] = stripUndefinedDeep(item);
+    }
+    return clean;
+  }
+  return value;
+}
+function taskForCloud(task) { return stripUndefinedDeep(normalizeTask(task)); }
 function taskFingerprint(task) { return JSON.stringify(taskForCloud(task)); }
 function metaForCloud() {
-  return {
+  return stripUndefinedDeep({
     schemaVersion: CLOUD_SCHEMA_VERSION,
     settings: state.settings,
     externalEvents: state.externalEvents,
     appVersion: CACHE_VERSION
-  };
+  });
 }
 function metaFingerprint(meta = metaForCloud()) {
   return JSON.stringify({
@@ -1269,19 +1290,20 @@ function actionOption({icon,title,sub='',end='',attrs='',className=''}){return `
 function showActionSheet(html){els.actionSheetContent.innerHTML=html;openSheet(els.actionSheet);}
 
 function openWhatsNew(){
-  showActionSheet(`${sheetHeader('Novedades','Organizador 5.0.4')}
+  showActionSheet(`${sheetHeader('Novedades','Organizador 5.0.5')}
     <div class="release-hero">
       <span class="release-badge">NUEVO</span>
       <strong>Más foco. Menos gestión.</strong>
-      <p>La actualización refina cómo planificas el fin de semana y cómo trabajas en Windows, sin añadir ruido al día a día.</p>
+      <p>Esta actualización corrige la sincronización con Firebase y mantiene las mejoras de planificación y Enfoque de Windows.</p>
     </div>
     <div class="release-feature-grid">
-      <article><span class="release-feature-icon">${ICON('calendar')}</span><div><strong>Semana próxima</strong><small>Los sábados y domingos puedes dejar la siguiente semana preparada desde la PWA de Windows.</small></div></article>
+      <article><span class="release-feature-icon">${ICON('calendar')}</span><div><strong>Sincronización corregida</strong><small>Las tareas con historial ya no pueden enviar valores incompatibles con Firestore.</small></div></article>
       <article><span class="release-feature-icon">${ICON('target')}</span><div><strong>Enfoque Trabajo</strong><small>Un horario local puede convertir la PWA en una vista dedicada únicamente al trabajo.</small></div></article>
       <article><span class="release-feature-icon">${ICON('history')}</span><div><strong>Novedades premium</strong><small>Los cambios recientes ahora se presentan como notas de versión claras y compactas.</small></div></article>
     </div>
-    <details class="release-history"><summary>Versiones anteriores <span>5.0.3 → 4.2</span></summary>
+    <details class="release-history"><summary>Versiones anteriores <span>5.0.4 → 4.2</span></summary>
       <div class="release-timeline">
+        <div><strong>5.0.4</strong><span>Planificación de fin de semana y Enfoque Trabajo en Windows.</span></div>
         <div><strong>5.0.3</strong><span>Menú + estabilizado en PWA.</span></div>
         <div><strong>5.0.2</strong><span>Accesos rápidos y panel de novedades.</span></div>
         <div><strong>5.0.1</strong><span>Modo oscuro y PWA pulidos.</span></div>
@@ -2059,7 +2081,7 @@ setInterval(()=>{
   if(active!==state.workFocusWasActive)render();
 },30000);
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=5.0.4',{updateViaCache:'none'}).then(reg=>reg.update()).catch(error=>console.warn('Service worker:',error)));}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=5.0.5',{updateViaCache:'none'}).then(reg=>reg.update()).catch(error=>console.warn('Service worker:',error)));}
 
 function processLaunchAction(){
   const u=new URL(location.href),action=u.searchParams.get('action');if(!action)return;

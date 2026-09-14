@@ -1,6 +1,6 @@
-# Organizador personal inteligente · v5.0.4
+# Organizador personal inteligente · v5.0.5
 
-La v5.0.4 mantiene la filosofía de la aplicación sin romper la sincronización existente:
+La v5.0.5 mantiene la filosofía de la aplicación sin romper la sincronización existente:
 
 - **Web / escritorio = Planning Studio** para pensar, equilibrar y revisar la semana.
 - **PWA / móvil = Capturar y hacer** con una interfaz más silenciosa, uso con una mano y acceso directo a la siguiente acción.
@@ -8,7 +8,13 @@ La v5.0.4 mantiene la filosofía de la aplicación sin romper la sincronización
 - La inteligencia principal continúa siendo **local-first**: scoring, estimaciones, agrupación, riesgo y recomendaciones no requieren una API de IA para responder.
 
 
-## Novedades v5.0.4
+## Novedades v5.0.5
+
+- Corregido un fallo de sincronización Firestore provocado por valores `undefined` dentro del historial de tareas.
+- Las escrituras de tareas y metadatos se saneán antes de enviarse a la nube como protección adicional.
+- No modifica reglas, proyecto Firebase ni estructura de datos existente.
+
+## Base funcional v5.0.5
 
 - **Novedades premium**: el historial de cambios se presenta ahora con una tarjeta principal, tres mejoras destacadas y un historial compacto de versiones anteriores.
 - **Planificación de fin de semana en Windows PWA**: los sábados y domingos aparece `Dejar planificada la semana próxima` en Planning Studio. Permite escoger el día de la semana siguiente, crear tareas directamente agendadas y distribuir pendientes sin fecha según la carga. Mientras la sesión está activa, las nuevas tareas quedan planificadas para el día seleccionado salvo que indiques expresamente otra fecha.
@@ -77,7 +83,7 @@ Para una primera instalación nueva, consulta `CONFIGURACION-FIREBASE.md` y publ
 2. Sustituye en GitHub el contenido de la versión anterior por el contenido de este ZIP.
 3. Comprueba que `index.html` queda en la raíz del repositorio.
 4. Espera a que GitHub Pages publique la nueva versión.
-5. Cierra y vuelve a abrir la PWA. El Service Worker usa una caché nueva de v5.0.4.
+5. Cierra y vuelve a abrir la PWA. El Service Worker usa una caché nueva de v5.0.5.
 
 Los datos sincronizados no se borran. Las preferencias puramente locales del dispositivo pueden evolucionar de forma independiente.
 

@@ -1113,7 +1113,7 @@ body.modal-open { overscroll-behavior: none; }
 :root[data-appearance="dark"] .fab-menu button.is-pressed { background:#2a3137; }
 
 /* ========================================================================== 
-   v5.0.4 · Novedades premium · Planificación de fin de semana · Enfoque Windows
+   v5.0.5 · Novedades premium · Planificación de fin de semana · Enfoque Windows
    ========================================================================== */
 .category-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .focus-mode-btn,.weekend-plan-btn{border:1px solid var(--premium-line);background:#f5f6f7;color:#56616c;border-radius:12px;min-height:38px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:10px;font-weight:800;white-space:nowrap}

@@ -1,6 +1,6 @@
-# Organizador personal inteligente · v5.0.5
+# Organizador personal inteligente · v5.1.0
 
-La v5.0.5 mantiene la filosofía de la aplicación sin romper la sincronización existente:
+La v5.1.0 mantiene la filosofía de la aplicación sin romper la sincronización existente:
 
 - **Web / escritorio = Planning Studio** para pensar, equilibrar y revisar la semana.
 - **PWA / móvil = Capturar y hacer** con una interfaz más silenciosa, uso con una mano y acceso directo a la siguiente acción.
@@ -8,18 +8,26 @@ La v5.0.5 mantiene la filosofía de la aplicación sin romper la sincronización
 - La inteligencia principal continúa siendo **local-first**: scoring, estimaciones, agrupación, riesgo y recomendaciones no requieren una API de IA para responder.
 
 
-## Novedades v5.0.5
+## Novedades v5.1.0
 
-- Corregido un fallo de sincronización Firestore provocado por valores `undefined` dentro del historial de tareas.
-- Las escrituras de tareas y metadatos se saneán antes de enviarse a la nube como protección adicional.
-- No modifica reglas, proyecto Firebase ni estructura de datos existente.
+- Duración realmente opcional en Trabajo, Personal y Estudios; internamente se guarda como `null` cuando no se estima.
+- Al completar una tarea sin estimación, la app pregunta de forma no bloqueante el tiempo real empleado, con presets rápidos y opción de omitir.
+- Las tareas divididas avanzan paso a paso; el último toque completa la tarea y el progreso queda visible.
+- Undo temporal de 5 segundos, con pausa al interactuar y stack limitado.
+- Sistema de overlays unificado con estados opening/open/closing/closed, bloqueo de scroll, restauración de foco, Escape consistente y protección anti ghost-click.
+- Protección anti doble ejecución en guardado, entrada rápida, recordatorios y acciones sensibles.
+- Búsqueda con debounce e índice local cacheado; orden más determinista.
+- Sincronización incremental endurecida con sanitización central, limpieza de listeners y reintentos con backoff.
+- Registro local de errores, botón Copiar diagnóstico y versión/esquema visibles.
+- Mejoras de accesibilidad y PWA: hitboxes mínimas, focus visible, reduced motion, visualViewport, safe areas, feature detection y flujo de actualización del Service Worker.
+- `schemaVersion 6`, con normalización compatible de tareas existentes y sin cambios destructivos en Firebase.
 
-## Base funcional v5.0.5
+## Base funcional v5.1.0
 
 - **Novedades premium**: el historial de cambios se presenta ahora con una tarjeta principal, tres mejoras destacadas y un historial compacto de versiones anteriores.
 - **Planificación de fin de semana en Windows PWA**: los sábados y domingos aparece `Dejar planificada la semana próxima` en Planning Studio. Permite escoger el día de la semana siguiente, crear tareas directamente agendadas y distribuir pendientes sin fecha según la carga. Mientras la sesión está activa, las nuevas tareas quedan planificadas para el día seleccionado salvo que indiques expresamente otra fecha.
 - **Enfoque Trabajo en Windows PWA**: desde el área Trabajo se puede definir un horario local (por defecto 09:00–17:00). De lunes a viernes, durante esa franja la PWA se restringe automáticamente a Trabajo y recupera la interfaz normal al terminar. El horario es local al dispositivo y puede pausarse por el resto del día.
-- Firebase, Firestore y `schemaVersion 5` se mantienen sin cambios destructivos.
+- Firebase, Firestore y `schemaVersion 6` se mantienen sin cambios destructivos.
 
 ## Captura ultrarrápida
 
@@ -83,7 +91,7 @@ Para una primera instalación nueva, consulta `CONFIGURACION-FIREBASE.md` y publ
 2. Sustituye en GitHub el contenido de la versión anterior por el contenido de este ZIP.
 3. Comprueba que `index.html` queda en la raíz del repositorio.
 4. Espera a que GitHub Pages publique la nueva versión.
-5. Cierra y vuelve a abrir la PWA. El Service Worker usa una caché nueva de v5.0.5.
+5. Cierra y vuelve a abrir la PWA. El Service Worker usa una caché nueva de v5.1.0.
 
 Los datos sincronizados no se borran. Las preferencias puramente locales del dispositivo pueden evolucionar de forma independiente.
 
@@ -100,3 +108,8 @@ Algunas capacidades dependen del navegador o sistema operativo, por ejemplo reco
 - `sw.js` — Service Worker/offline.
 - `manifest.webmanifest` — instalación PWA y accesos rápidos.
 - `firestore.rules` — reglas de seguridad de Firestore.
+
+
+## 5.1.0 · Stability & Polish
+
+Versión centrada en robustez: duración opcional y tiempo real al completar, tareas por pasos, overlays unificados, protección de gestos/doble ejecución, Undo temporal, toasts en cola, sincronización incremental más resistente, diagnóstico local, accesibilidad, dark mode y auditoría PWA.

@@ -10,8 +10,8 @@
   <meta name="apple-mobile-web-app-title" content="Organizador" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="format-detection" content="telephone=no" />
-  <title>Organizador personal inteligente · 5.0.5</title>
-  <link rel="manifest" href="manifest.webmanifest?v=5.0.5" />
+  <title>Organizador personal inteligente · 5.1.0</title>
+  <link rel="manifest" href="manifest.webmanifest?v=5.1.0" />
   <link rel="icon" type="image/x-icon" href="favicon-v313.ico" sizes="any" />
   <link rel="shortcut icon" type="image/x-icon" href="favicon-v313.ico" />
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32-v313.png" />
@@ -20,8 +20,8 @@
   <link rel="apple-touch-icon-precomposed" sizes="180x180" href="icons/apple-touch-icon-v313.png" />
   <meta name="msapplication-TileColor" content="#07121f" />
   <meta name="msapplication-TileImage" content="icons/icon-512-v313.png" />
-  <meta name="msapplication-config" content="browserconfig.xml?v=5.0.5" />
-  <link rel="stylesheet" href="styles.css?v=5.0.5" />
+  <meta name="msapplication-config" content="browserconfig.xml?v=5.1.0" />
+  <link rel="stylesheet" href="styles.css?v=5.1.0" />
 </head>
 <body>
   <!-- Sprite SVG local: iconografía consistente, sin librerías externas. -->
@@ -243,7 +243,7 @@
         <div class="quick-task-line"><input id="taskTitle" type="text" placeholder="¿Qué tienes que hacer?" maxlength="140" required autocomplete="off" /><button type="button" class="voice-btn" id="taskVoiceBtn" aria-label="Dictar tarea" title="Dictar"><svg><use href="#i-mic"/></svg></button></div>
         <div class="quick-meta-row">
           <label class="mini-select"><span>Área</span><select id="taskCategory"><option value="work">Trabajo</option><option value="personal">Personal</option><option value="study">Estudios</option></select></label>
-          <label class="mini-select"><span>Tiempo</span><select id="taskDuration"><option value="10">10m</option><option value="15">15m</option><option value="20">20m</option><option value="30" selected>30m</option><option value="45">45m</option><option value="60">1h</option><option value="90">1h30</option><option value="120">2h</option></select></label>
+          <label class="mini-select"><span>Tiempo</span><select id="taskDuration"><option value="" selected>Sin estimar</option><option value="10">10m</option><option value="15">15m</option><option value="20">20m</option><option value="30">30m</option><option value="45">45m</option><option value="60">1h</option><option value="90">1h30</option><option value="120">2h</option></select></label>
           <button type="button" class="mini-chip" id="taskDateCycle"><span>Cuándo</span><strong>Hoy</strong></button>
           <button type="button" class="mini-chip" id="taskPriorityCycle"><span>Prioridad</span><strong>Media</strong></button>
         </div>
@@ -346,7 +346,7 @@
         <div class="settings-section"><span class="section-kicker">Instalación</span><h3>Úsala como una app</h3><button type="button" class="connect-btn install-btn" id="installAppBtn"><strong>Instalar Organizador</strong><span id="installAppStatus">Disponible en PWA compatible</span></button></div>
         <div class="settings-section"><span class="section-kicker">Seguridad local</span><h3>Privacidad en este dispositivo</h3><div class="connect-grid"><button type="button" class="connect-btn" id="localLockBtn"><strong>Bloqueo con PIN</strong><span id="localLockStatus">Desactivado</span></button><button type="button" class="connect-btn" id="biometricSetupBtn"><strong>Biometría / dispositivo</strong><span id="biometricStatus">Configurar si está disponible</span></button></div></div>
         <div class="settings-section"><span class="section-kicker">Datos</span><h3>Copia y restauración</h3><div class="connect-grid"><button type="button" class="connect-btn" id="exportBackupBtn"><strong>Exportar copia</strong><span>JSON completo y portable.</span></button><button type="button" class="connect-btn" id="importBackupBtn"><strong>Importar copia</strong><span>Previsualizar antes de mezclar.</span></button><input type="file" id="backupFileInput" accept="application/json,.json" hidden /></div><button type="button" class="connect-btn reset-app-btn" id="resetAppBtn"><strong>Resetear aplicación</strong><span>Borrar tareas, ajustes y memoria de la app.</span></button></div>
-        <div class="sheet-actions"><button type="button" class="ghost-btn" data-close-sheet="settingsSheet">Cerrar</button><button type="submit" class="primary-btn">Guardar ajustes</button></div>
+        <div class="settings-section app-health"><span class="section-kicker">Diagnóstico</span><h3>Estado de la aplicación</h3><div class="health-row"><span>Versión</span><strong>5.1.0 · esquema 6</strong></div><button type="button" class="connect-btn" id="copyDiagnosticsBtn"><strong>Copiar diagnóstico</strong><span>Versión, sincronización y últimos errores locales.</span></button></div><div class="sheet-actions"><button type="button" class="ghost-btn" data-close-sheet="settingsSheet">Cerrar</button><button type="submit" class="primary-btn">Guardar ajustes</button></div>
       </form>
     </section>
   </div>
@@ -368,7 +368,7 @@
   <div class="undo-bar" id="undoBar" role="status" aria-live="polite" hidden><span id="undoText">Tarea completada</span><button id="undoBtn">Deshacer</button></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="config.js?v=5.0.5"></script>
-  <script src="app.js?v=5.0.5"></script>
+  <script src="config.js?v=5.1.0"></script>
+  <script src="app.js?v=5.1.0"></script>
 </body>
 </html>

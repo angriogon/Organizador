@@ -1172,7 +1172,7 @@ body.modal-open { position:fixed; width:100%; left:0; right:0; }
 }
 
 /* =========================================================
-   v5.1.1 · Reliability & visual polish
+   v6.0 RC1 · Foundation v5.2 · Foundation & visual polish visual polish
    ========================================================= */
 /* El título y el dictado son dos celdas reales: el foco no atraviesa el micrófono. */
 .quick-task-line{grid-template-columns:minmax(0,1fr) 48px;column-gap:6px;padding:4px 5px 4px 12px;overflow:hidden}
@@ -1196,3 +1196,62 @@ body.modal-open { position:fixed; width:100%; left:0; right:0; }
 :root[data-appearance="dark"] .task-meta,
 :root[data-appearance="dark"] .focus-row small,
 :root[data-appearance="dark"] .micro-note{color:#a7b0b9}
+
+/* =========================================================
+   v6.0 RC1 · Interaction, accessibility and planning polish
+   ========================================================= */
+/* Keep a 44px hit target without turning the completion mark into a huge circle. */
+.task-check{
+  position:relative!important;width:var(--tap-min)!important;height:var(--tap-min)!important;
+  min-width:var(--tap-min)!important;min-height:var(--tap-min)!important;border:0!important;
+  background:transparent!important;border-radius:50%!important;color:#fff!important;
+}
+.task-check::before{
+  content:"";position:absolute;width:20px;height:20px;border:1.5px solid #cbd1d7;border-radius:50%;
+  background:transparent;box-sizing:border-box;transition:background .14s ease,border-color .14s ease,transform .14s ease;
+}
+.task-check svg{position:relative;z-index:1;width:12px!important;height:12px!important;opacity:0!important}
+.task-item.is-done .task-check::before{background:#7a858f;border-color:#7a858f}
+.task-item.is-done .task-check svg{opacity:1!important}
+.task-check:active::before{transform:scale(.9)}
+:root[data-appearance="dark"] .task-check::before{border-color:#69737c}
+:root[data-appearance="dark"] .task-item.is-done .task-check::before{background:#8a949d;border-color:#8a949d}
+
+/* Toasts must use either top or bottom, never both (iOS previously stretched them full-height). */
+.toast{width:max-content;max-width:min(92vw,520px);height:auto!important;max-height:min(30vh,180px);overflow:auto;white-space:normal;line-height:1.35}
+@media(max-width:760px){.toast{top:auto!important;bottom:calc(82px + env(safe-area-inset-bottom))!important;left:50%;}}
+
+/* Direct add from Trabajo / Personal / Estudios: the destination is fixed. */
+.compact-task-form.direct-category-mode .quick-meta-row{grid-template-columns:.8fr .9fr .9fr}
+.compact-task-form.direct-category-mode .quick-meta-row>label:first-child{display:none}
+.compact-task-form.direct-category-mode #taskCategory{pointer-events:none}
+
+/* Planning week navigation. */
+.planning-week-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}
+.planning-week-nav .week-nav-side{display:flex;align-items:center;gap:6px}
+.planning-week-label{font-size:11px;font-weight:800;color:var(--text);text-align:center;letter-spacing:-.01em}
+.week-nav-btn{min-width:40px!important;min-height:40px!important;width:40px;height:40px;padding:0;border-radius:12px;display:grid;place-items:center}
+.week-nav-btn svg{width:16px;height:16px}
+.plan-day.past{opacity:.82}.plan-day.past .plan-items button span{color:var(--muted)}
+@media(max-width:760px){.planning-week-nav{position:sticky;left:0}.planning-week-label{font-size:10px}.planning-week-nav .ghost-btn.compact{padding-inline:9px}}
+
+/* Settings: professional grouped cards instead of a long undifferentiated sheet. */
+.settings-sheet .sheet-body{background:var(--surface)}
+.settings-sheet .settings-section{margin:12px 0 0;padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--surface-raised,#fff)}
+.settings-sheet .settings-section:first-of-type{margin-top:14px}
+.settings-sheet .settings-section h3{font-size:14px;margin:2px 0 12px}
+.settings-sheet .settings-section .section-kicker{display:block;margin-bottom:2px}
+.settings-sheet .connect-grid{gap:8px}
+.settings-sheet .connect-btn{border-color:var(--line);transition:transform .14s ease,background .14s ease,border-color .14s ease}
+.settings-sheet .connect-btn:hover{transform:translateY(-1px)}
+.settings-sheet .app-health{background:linear-gradient(145deg,rgba(120,135,150,.08),transparent)}
+.settings-sheet .health-row{border-bottom:1px solid var(--line);margin-bottom:10px}
+:root[data-appearance="dark"] .settings-sheet .settings-section{background:#1b2025;border-color:#2c3339}
+:root[data-appearance="dark"] .settings-sheet .app-health{background:linear-gradient(145deg,#20262c,#1b2025)}
+
+/* Slightly calmer dark icons while keeping active/primary controls crisp. */
+:root[data-appearance="dark"] .icon-btn.subtle svg,
+:root[data-appearance="dark"] .nav-item:not(.active) svg{opacity:.72}
+:root[data-appearance="dark"] .icon-btn.subtle:hover svg,
+:root[data-appearance="dark"] .icon-btn.subtle:focus-visible svg,
+:root[data-appearance="dark"] .nav-item.active svg{opacity:1}

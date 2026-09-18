@@ -1,33 +1,5 @@
 'use strict';
 
-const STORAGE_KEY = 'opi_tasks_v2';
-const LEGACY_STORAGE_KEY = 'opi_tasks_v1';
-const SETTINGS_KEY = 'opi_settings_v2';
-const EXTERNAL_EVENTS_KEY = 'opi_external_events_v2';
-const UI_KEY = 'opi_ui_v3';
-const CACHE_VERSION = '5.1.1';
-const SYNC_META_KEY = 'opi_sync_meta_v41';
-const CLOUD_BACKUP_PREFIX = 'opi_prefirebase_backup_v41_';
-const CLOUD_SCHEMA_VERSION = 6;
-const DATA_SCHEMA_VERSION = 6;
-const DATA_SCHEMA_KEY = 'opi_schema_version';
-const LEARNING_KEY = 'opi_learning_v50';
-const SECURITY_KEY = 'opi_security_v50';
-const FIREBASE_SDK_VERSION = '12.18.0';
-const UNDO_TIMEOUT_MS = 5000;
-const ACTION_LOCK_MS = 420;
-const SEARCH_DEBOUNCE_MS = 140;
-const DRAFT_KEY = 'opi_task_draft_v51';
-const ERROR_LOG_KEY = 'opi_error_log_v51';
-
-const DEFAULT_SETTINGS = { name: 'Angel', dailyCapacity: 450, haptics: true, weekendMode: true, theme: 'neutral', defaultProfile: 'normal', privacyMode: false, intelligentMode: true, bufferPercent: 15, maxHighPerDay: 2, workFreeWeekend: false, appearance: 'system' };
-const DEFAULT_UI = { focus: { date: '', ids: [] }, gestureUses: 0, celebratedDate: '', reminderNotified: {}, tightDayDate: '', dayProfileDate: '', dayProfile: 'normal', activeNowTaskId: '', activeNowStartedAt: '', lastOpenedDate: '', lastOpenedAt: '', recoveryPendingDays: 0, commandKnown: false, planningWeekStart: '', smartList: '', advancedTaskOpen: false, onboardingLevel: 0, lastAutoBackupAt: '', weekendPlanning: { selectedDate: '', active: false }, workFocus: { enabled: false, start: '09:00', end: '17:00', overrideDate: '' } };
-const DEFAULT_LEARNING = { durationSamples: [], decisions: [], completionHours: {}, lastInsightAt: '', categoryHints: {}, contextStats: {}, weeklySnapshots: [], pauseReasons: {}, taskTemplates: {}, correctionHints: {}, actualSessions: [] };
-const DEFAULT_SECURITY = { enabled: false, pinHash: '', biometricCredentialId: '' };
-const CATEGORY_LABELS = { work: 'Trabajo', personal: 'Vida personal / vivienda', study: 'Estudios' };
-const CATEGORY_SHORT = { work: 'Trabajo', personal: 'Personal', study: 'Estudios' };
-const PRIORITY_LABELS = { low: 'Baja', medium: 'Media', high: 'Alta' };
-const ENERGY_LABELS = { low: 'Baja', normal: 'Normal', high: 'Alta' };
 const ICON = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
 
 function loadSyncMeta() {
@@ -105,12 +77,9 @@ const state = {
 };
 
 const ids = [
-  'currentDate','pageTitle','capacityRing','homeView','tasksView','calendarView','planningView','planningInsight','planningWeekBoard','weekendPlanBtn','riskList','smartLists','outcomeList','premiumInsight','yearHeatmap','planningBalanceBtn','planningCleanBtn','newOutcomeBtn','homeCard','greeting','adaptiveLine','loadEmoji','loadPercent','loadStatus','capacityContext','dayProfileBtn','dayProfileLabel','loadBar','focusHeadingText','focusProgress','topThreeList','startNextBtn','lowEnergyBtn','tightDayBtn','smartRecommendation','miniAgendaText','miniAgendaOpen','gapChips','gestureHint','smartResults','smartResultsTitle','contextGroupSummary','smartTaskList','sequenceStartBtn','categoryTitle','workFocusBtn','categoryTaskList','categoryEmpty','calendarMonthTitle','calendarGrid','calendarWeekStrip','weekCapacityStrip','dayAgendaTitle','dayAgendaLoad','dayAgendaList','contextIsland','fab','fabMenu','taskSheet','taskForm','taskSheetKicker','taskSheetTitle','taskEditId','taskTitle','taskCategory','taskDuration','taskScheduledDate','taskScheduledTime','taskDeadline','taskRecurrence','taskPriority','taskEnergy','taskTodayPriority','taskNonNegotiable','taskProject','taskOutcome','taskDependsOn','taskContext','taskAdvancedToggle','taskAdvancedFields','taskDateCycle','taskPriorityCycle','taskVoiceBtn','quickVoiceBtn','taskHistoryBtn','taskCapacityPreview','quickSheet','quickForm','quickTaskInput','reminderSheet','reminderForm','reminderTitle','reminderDate','reminderTime','reminderCategory','actionSheet','actionSheetContent','settingsSheet','settingsForm','settingsName','settingsCapacity','settingsHaptics','settingsWeekendMode','settingsTheme','settingsDefaultProfile','settingsPrivacyMode','settingsIntelligentMode','settingsBuffer','settingsMaxHigh','settingsWorkFreeWeekend','settingsAppearance','openTrashBtn','exportCsvBtn','autoBackupBtn','syncIssueBadge','syncStateDot','syncAccountStatus','syncDeviceStatus','syncAuthPanel','syncEmail','syncPassword','syncSignInBtn','syncCreateBtn','syncResetBtn','syncSignedPanel','syncNowBtn','syncSignOutBtn','googleSyncStatus','icsFileInput','installAppBtn','installAppStatus','localLockBtn','localLockStatus','biometricSetupBtn','biometricStatus','localBiometricBtn','exportBackupBtn','importBackupBtn','backupFileInput','resetAppBtn','nowMode','nowTaskTitle','nowTaskMeta','nowCompleteBtn','nowPauseBtn','nowSnoozeBtn','nowNextBtn','nowMoreBtn','privacyCurtain','localLockScreen','localLockPin','localUnlockBtn','localLockError','undoBar','undoText','undoBtn','toast'
+  'currentDate','pageTitle','capacityRing','homeView','tasksView','calendarView','planningView','planningInsight','planningWeekBoard','planningWeekLabel','planningPrevWeekBtn','planningNextWeekBtn','planningThisWeekBtn','weekendPlanBtn','riskList','smartLists','outcomeList','premiumInsight','yearHeatmap','planningBalanceBtn','planningCleanBtn','newOutcomeBtn','homeCard','greeting','adaptiveLine','loadEmoji','loadPercent','loadStatus','capacityContext','dayProfileBtn','dayProfileLabel','loadBar','focusHeadingText','focusProgress','topThreeList','startNextBtn','lowEnergyBtn','tightDayBtn','smartRecommendation','miniAgendaText','miniAgendaOpen','gapChips','gestureHint','smartResults','smartResultsTitle','contextGroupSummary','smartTaskList','sequenceStartBtn','categoryTitle','workFocusBtn','categoryTaskList','categoryEmpty','calendarMonthTitle','calendarGrid','calendarWeekStrip','weekCapacityStrip','dayAgendaTitle','dayAgendaLoad','dayAgendaList','contextIsland','fab','fabMenu','taskSheet','taskForm','taskSheetKicker','taskSheetTitle','taskEditId','taskTitle','taskCategory','taskDuration','taskScheduledDate','taskScheduledTime','taskDeadline','taskRecurrence','taskPriority','taskEnergy','taskTodayPriority','taskNonNegotiable','taskProject','taskOutcome','taskDependsOn','taskContext','taskAdvancedToggle','taskAdvancedFields','taskDateCycle','taskPriorityCycle','taskVoiceBtn','quickVoiceBtn','taskHistoryBtn','taskCapacityPreview','quickSheet','quickForm','quickTaskInput','reminderSheet','reminderForm','reminderTitle','reminderDate','reminderTime','reminderCategory','actionSheet','actionSheetContent','settingsSheet','settingsForm','settingsName','settingsCapacity','settingsHaptics','settingsWeekendMode','settingsTheme','settingsDefaultProfile','settingsPrivacyMode','settingsIntelligentMode','settingsBuffer','settingsMaxHigh','settingsWorkFreeWeekend','settingsAppearance','openTrashBtn','exportCsvBtn','autoBackupBtn','syncIssueBadge','syncStateDot','syncAccountStatus','syncDeviceStatus','syncAuthPanel','syncEmail','syncPassword','syncSignInBtn','syncCreateBtn','syncResetBtn','syncSignedPanel','syncNowBtn','syncSignOutBtn','googleSyncStatus','icsFileInput','installAppBtn','installAppStatus','localLockBtn','localLockStatus','biometricSetupBtn','biometricStatus','localBiometricBtn','exportBackupBtn','importBackupBtn','backupFileInput','resetAppBtn','nowMode','nowTaskTitle','nowTaskMeta','nowCompleteBtn','nowPauseBtn','nowSnoozeBtn','nowNextBtn','nowMoreBtn','privacyCurtain','localLockScreen','localLockPin','localUnlockBtn','localLockError','undoBar','undoText','undoBtn','toast'
 ];
 const els = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
-
-function deepClone(value) { return JSON.parse(JSON.stringify(value)); }
-function uid() { return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`; }
 
 function loadSettings() {
   try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') }; }
@@ -210,48 +179,10 @@ function saveAll({ skipSync = false } = {}) {
 }
 function saveUI() { localStorage.setItem(UI_KEY, JSON.stringify(state.ui)); }
 
-function todayISO() { return toISO(new Date()); }
-function toISO(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth()+1).padStart(2,'0');
-  const d = String(date.getDate()).padStart(2,'0');
-  return `${y}-${m}-${d}`;
-}
-function parseISODate(iso) { if (!iso) return null; const [y,m,d] = iso.split('-').map(Number); return new Date(y,m-1,d); }
-function addDays(iso,n) { const d = parseISODate(iso || todayISO()); d.setDate(d.getDate()+n); return toISO(d); }
-function addMonths(iso,n) {
-  const source=parseISODate(iso || todayISO());
-  const day=source.getDate();
-  const target=new Date(source.getFullYear(),source.getMonth()+Number(n||0),1);
-  const lastDay=new Date(target.getFullYear(),target.getMonth()+1,0).getDate();
-  target.setDate(Math.min(day,lastDay));
-  return toISO(target);
-}
-function startOfMonth(date) { return new Date(date.getFullYear(), date.getMonth(), 1); }
-function formatMinutes(minutes) {
-  if (minutes === null || minutes === '' || minutes === undefined || !Number.isFinite(Number(minutes))) return 'Sin estimar';
-  const m = Math.max(0,Math.round(Number(minutes)));
-  if (m < 60) return `${m} min`;
-  const h = Math.floor(m/60), r = m%60;
-  return r ? `${h} h ${r} min` : `${h} h`;
-}
-function formatDate(iso, long = false) {
-  if (!iso) return 'Sin fecha';
-  if (iso === todayISO()) return 'Hoy';
-  if (iso === addDays(todayISO(),1)) return 'Mañana';
-  return new Intl.DateTimeFormat('es-ES', long ? {weekday:'short',day:'numeric',month:'short'} : {day:'numeric',month:'short'}).format(parseISODate(iso));
-}
-function weekdayName(iso) { return new Intl.DateTimeFormat('es-ES',{weekday:'long'}).format(parseISODate(iso)).replace(/^./,c=>c.toUpperCase()); }
-function dayDistance(iso) { if (!iso) return Infinity; return Math.round((parseISODate(iso)-parseISODate(todayISO()))/86400000); }
 function isOverdueDeadline(task) { return Boolean(task.deadline && task.deadline < todayISO()); }
 function activeTasks() { return state.tasks.filter(t => !t.completedAt && !t.archivedAt && !t.deletedAt); }
 function tasksOn(date) { return activeTasks().filter(t => t.scheduledDate === date); }
 function completedToday() { return state.tasks.filter(t => t.completedAt && toISO(new Date(t.completedAt)) === todayISO()); }
-function parseTimeMinutes(time) { if (!time || !/^\d{2}:\d{2}$/.test(time)) return null; const [h,m]=time.split(':').map(Number); return h*60+m; }
-function minutesToTime(value) { const n=Math.max(0,Math.min(1439,Math.round(value))); return `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`; }
-function isMobile() { return matchMedia('(max-width: 760px)').matches; }
-function isStandaloneApp(){ return matchMedia('(display-mode: standalone)').matches || navigator.standalone===true; }
-function isWindowsPWA(){ return isStandaloneApp() && !isIOS() && /Windows/i.test(navigator.userAgent||''); }
 function isWeekendNow(){ const day=new Date().getDay(); return day===0||day===6; }
 function nextWeekMonday(){ const day=new Date().getDay(),delta=day===0?1:8-day; return addDays(todayISO(),delta); }
 function nextWeekDates(){ const monday=nextWeekMonday(); return Array.from({length:7},(_,i)=>addDays(monday,i)); }
@@ -271,7 +202,6 @@ function enforceWorkFocus(){
   if(!active&&state.workFocusWasActive&&state.route==='work')state.route='home';
   state.workFocusWasActive=active;
 }
-function reduceMotion() { return matchMedia('(prefers-reduced-motion: reduce)').matches; }
 
 function getBusyMinutes(date) {
   const intervals=[]; let fallback=0;
@@ -554,10 +484,22 @@ function suggestCategoryForTitle(title){
 function applyCategorySuggestion(){
   if(!els.taskTitle||els.taskEditId?.value)return;const suggested=suggestCategoryForTitle(els.taskTitle.value);if(suggested&&els.taskCategory.value!==suggested){els.taskCategory.value=suggested;els.taskCategory.dataset.suggested='1';}
 }
-function getPlanningWeekStart(){
-  const base=state.ui.planningWeekStart||todayISO(),d=parseISODate(base),offset=(d.getDay()+6)%7;return addDays(base,-offset);
-}
+function getPlanningWeekStartFrom(base){const d=parseISODate(base),offset=(d.getDay()+6)%7;return addDays(base,-offset);}
+function getPlanningWeekStart(){return getPlanningWeekStartFrom(state.ui.planningWeekStart||todayISO());}
+
 function getWeekDates(start=getPlanningWeekStart()){return Array.from({length:7},(_,i)=>addDays(start,i));}
+function getPlanningDayTasks(date){
+  const all=state.tasks.filter(t=>!t.archivedAt&&!t.deletedAt&&t.scheduledDate===date);
+  return date<todayISO()?all:all.filter(t=>!t.completedAt);
+}
+function getPlanningDayLoad(date){
+  if(date>=todayISO())return getDayLoad(date);
+  const planned=getPlanningDayTasks(date).reduce((sum,t)=>sum+(t.actualDuration??predictedDuration(t)),0);
+  const capacity=getDayCapacity(date);
+  return {planned,mental:planned,capacity,percent:Math.round((planned/Math.max(1,capacity))*100)};
+}
+function shiftPlanningWeek(delta){state.ui.planningWeekStart=addDays(getPlanningWeekStart(),delta*7);saveUI();renderPlanning();}
+function resetPlanningWeek(){state.ui.planningWeekStart='';saveUI();renderPlanning();}
 function getWeekBalancePlan(){
   const dates=getWeekDates(),moves=[];const virtual=new Map(dates.map(d=>[d,getDayLoad(d).mental]));const caps=new Map(dates.map(d=>[d,getDayCapacity(d)]));
   for(const date of dates){let pct=Math.round((virtual.get(date)/caps.get(date))*100);if(pct<=90)continue;const candidates=tasksOn(date).filter(t=>!t.nonNegotiableDate&&!t.completedAt&&!isTaskBlocked(t)&&!(t.deadline&&t.deadline<=date)).sort((a,b)=>movableScore(a,date)-movableScore(b,date));for(const task of candidates){if(pct<=85)break;let target=null,best=999;for(const d of dates){if(d<=date)continue;if(task.deadline&&d>task.deadline)continue;if(state.settings.workFreeWeekend&&task.category==='work'&&isWeekendDate(d))continue;const n=virtual.get(d)+effectiveTaskLoadMinutes(task),p=Math.round(n/caps.get(d)*100);if(p<best&&p<=88){best=p;target=d;}}if(target){virtual.set(date,Math.max(0,virtual.get(date)-effectiveTaskLoadMinutes(task)));virtual.set(target,virtual.get(target)+effectiveTaskLoadMinutes(task));moves.push({id:task.id,from:date,to:target});pct=Math.round(virtual.get(date)/caps.get(date)*100);}}
@@ -576,9 +518,11 @@ function getSmartLists(){
   ];
 }
 function renderPlanning(){
-  if(state.route!=='planning'||!els.planningView)return;const dates=getWeekDates(),plan=getWeekBalancePlan(),burnout=getBurnoutSignal();
+  if(state.route!=='planning'||!els.planningView)return;const dates=getWeekDates(),plan=getWeekBalancePlan(),burnout=getBurnoutSignal(),weekStart=dates[0],weekEnd=dates[6],isCurrent=weekStart===getPlanningWeekStartFrom(todayISO());
+  if(els.planningWeekLabel)els.planningWeekLabel.textContent=`${formatDate(weekStart,true)} — ${formatDate(weekEnd,true)}`;
+  if(els.planningThisWeekBtn)els.planningThisWeekBtn.hidden=isCurrent;
   els.planningInsight.textContent=burnout?.text||plan.length?`${plan.length} ${plan.length===1?'movimiento puede':'movimientos pueden'} equilibrar tu semana.`:(getPersonalBufferInsight()||'Tu semana tiene margen razonable.');
-  els.planningWeekBoard.innerHTML=dates.map(date=>{const l=getDayLoad(date),tasks=tasksOn(date).filter(t=>!t.completedAt);return `<article class="plan-day ${l.percent>100?'over':''}" data-plan-date="${date}"><header><span>${new Intl.DateTimeFormat('es-ES',{weekday:'short'}).format(parseISODate(date)).replace('.','')}</span><strong>${parseISODate(date).getDate()}</strong><em>${l.percent}%</em></header><div class="plan-load"><i style="width:${Math.min(100,l.percent)}%"></i></div><div class="plan-items">${tasks.slice(0,4).map(t=>`<button data-open-task="${t.id}" title="${escapeHTML(t.title)}"><span>${escapeHTML(t.title)}</span><small>${formatMinutes(predictedDuration(t))}</small></button>`).join('')}${tasks.length>4?`<small>+${tasks.length-4}</small>`:''}</div></article>`;}).join('');
+  els.planningWeekBoard.innerHTML=dates.map(date=>{const l=getPlanningDayLoad(date),tasks=getPlanningDayTasks(date);return `<article class="plan-day ${l.percent>100?'over':''} ${date<todayISO()?'past':''}" data-plan-date="${date}"><header><span>${new Intl.DateTimeFormat('es-ES',{weekday:'short'}).format(parseISODate(date)).replace('.','')}</span><strong>${parseISODate(date).getDate()}</strong><em>${l.percent}%</em></header><div class="plan-load"><i style="width:${Math.min(100,l.percent)}%"></i></div><div class="plan-items">${tasks.slice(0,4).map(t=>`<button data-open-task="${t.id}" title="${escapeHTML(t.title)}"><span>${t.completedAt?'✓ ':''}${escapeHTML(t.title)}</span><small>${formatMinutes(t.actualDuration??predictedDuration(t))}</small></button>`).join('')}${tasks.length>4?`<small>+${tasks.length-4}</small>`:''}</div></article>`;}).join('');
   const risk=activeTasks().map(t=>({t,r:getTaskRisk(t)})).filter(x=>x.r.level==='high'||x.r.level==='medium').sort((a,b)=>b.r.score-a.r.score).slice(0,5);els.riskList.innerHTML=risk.length?risk.map(({t,r})=>`<button class="premium-row" data-open-task="${t.id}"><span><strong>${escapeHTML(t.title)}</strong><small>${r.label}${t.deadline?` · ${formatDate(t.deadline)}`:''}</small></span><em>${r.level==='high'?'!':'·'}</em></button>`).join(''):'<div class="premium-empty">Nada en riesgo ahora mismo.</div>';
   els.smartLists.innerHTML=getSmartLists().map(x=>`<button data-smart-list="${x.key}"><strong>${x.count}</strong><span>${x.label}</span></button>`).join('');
   const projects=new Map();for(const t of activeTasks().filter(t=>t.project||t.outcome)){const key=t.project||t.outcome,row=projects.get(key)||{name:key,total:0,done:0,minutes:0};row.total++;row.minutes+=predictedDuration(t);projects.set(key,row);}els.outcomeList.innerHTML=projects.size?[...projects.values()].slice(0,6).map(p=>`<div class="premium-row static"><span><strong>${escapeHTML(p.name)}</strong><small>${p.total} tareas · ${formatMinutes(p.minutes)}</small></span><em>${p.total}</em></div>`).join(''):'<div class="premium-empty">Añade un proyecto a una tarea cuando necesites agrupar un resultado.</div>';
@@ -1256,10 +1200,16 @@ function clearTaskDraft(){try{localStorage.removeItem(DRAFT_KEY);}catch(_){ }}
 function logClientError(kind,error){
   try{const list=JSON.parse(localStorage.getItem(ERROR_LOG_KEY)||'[]');list.push({at:new Date().toISOString(),kind,message:String(error?.message||error||'Error'),stack:String(error?.stack||'').slice(0,1200),version:CACHE_VERSION});localStorage.setItem(ERROR_LOG_KEY,JSON.stringify(list.slice(-20)));}catch(_){ }
 }
-function copyDiagnostics(){
+async function copyTextRobust(text){
+  try{if(navigator.clipboard?.writeText&&window.isSecureContext){await navigator.clipboard.writeText(text);return true;}}catch(_){ }
+  try{const ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,ta.value.length);const ok=document.execCommand('copy');ta.remove();if(ok)return true;}catch(_){ }
+  return false;
+}
+async function copyDiagnostics(){
   const meta=loadSyncMeta();let errors=[];try{errors=JSON.parse(localStorage.getItem(ERROR_LOG_KEY)||'[]');}catch(_){ }
-  const text=JSON.stringify({appVersion:CACHE_VERSION,schema:DATA_SCHEMA_VERSION,online:navigator.onLine,standalone:isStandalone(),route:state.route,taskCount:state.tasks.length,syncStatus:state.sync.status,lastSyncAt:meta.lastSyncAt||'',errors},null,2);
-  navigator.clipboard?.writeText(text).then(()=>toast('Diagnóstico copiado.')).catch(()=>toast('No se pudo copiar el diagnóstico.'));
+  const text=JSON.stringify({appVersion:CACHE_VERSION,schema:DATA_SCHEMA_VERSION,online:navigator.onLine,standalone:isStandalone(),platform:isIOS()?'iOS':isWindowsPWA()?'Windows PWA':'Web',route:state.route,taskCount:state.tasks.length,syncStatus:state.sync.status,lastSyncAt:meta.lastSyncAt||'',serviceWorker:Boolean(navigator.serviceWorker?.controller),errors},null,2);
+  const ok=await copyTextRobust(text);
+  if(ok)toast('Diagnóstico copiado.');else{try{await navigator.share?.({title:'Diagnóstico Organizador',text});toast('Diagnóstico preparado para compartir.');}catch(_){toast('No se pudo copiar. Mantén pulsado y copia desde el diagnóstico.',{duration:3600});}}
 }
 function installGlobalErrorBoundary(){
   window.addEventListener('error',e=>logClientError('error',e.error||e.message));
@@ -1316,13 +1266,16 @@ function resetTaskForm() {
 }
 function openTaskSheet(prefill={}) {
   resetTaskForm();
+  const directCategory=Boolean(prefill.lockCategory&&prefill.category&&!prefill.editId);
+  els.taskForm.classList.toggle('direct-category-mode',directCategory);
+  els.taskCategory.dataset.lockedCategory=directCategory?prefill.category:'';
   const task=prefill.editId?state.tasks.find(t=>t.id===prefill.editId):null;
   if(task){
     els.taskEditId.value=task.id;els.taskTitle.value=task.title;els.taskCategory.value=task.category;if(task.duration!=null)ensureSelectOption(els.taskDuration,task.duration);els.taskDuration.value=task.duration==null?'':String(task.duration);els.taskScheduledDate.value=task.scheduledDate;els.taskScheduledTime.value=task.scheduledTime;els.taskDeadline.value=task.deadline;els.taskRecurrence.value=task.recurrence;setChoice('priority',task.priority);setChoice('energy',task.energy);els.taskTodayPriority.checked=task.todayPriorityUntil===todayISO();els.taskNonNegotiable.checked=task.nonNegotiableDate===todayISO();
     if(els.taskProject)els.taskProject.value=task.project||'';if(els.taskOutcome)els.taskOutcome.value=task.outcome||'';if(els.taskContext)els.taskContext.value=task.context||'';populateDependencyOptions(task.id);if(els.taskDependsOn)els.taskDependsOn.value=task.dependsOnId||'';
     els.taskSheetKicker.textContent='Editar tarea';els.taskSheetTitle.textContent='Solo lo necesario';if(els.taskHistoryBtn)els.taskHistoryBtn.hidden=false;setTaskAdvanced(true);
   } else { if(prefill.category)els.taskCategory.value=prefill.category;if(prefill.date)els.taskScheduledDate.value=prefill.date;els.taskSheetKicker.textContent='Nueva tarea';els.taskSheetTitle.textContent='Captura rápida';if(els.taskHistoryBtn)els.taskHistoryBtn.hidden=true;setTaskAdvanced(false);restoreTaskDraft(); }
-  applyCategorySuggestion();syncCompactTaskMeta();updateCapacityPreview();openSheet(els.taskSheet);setTimeout(()=>els.taskTitle.focus(),80);
+  if(!directCategory)applyCategorySuggestion();syncCompactTaskMeta();updateCapacityPreview();openSheet(els.taskSheet);setTimeout(()=>els.taskTitle.focus(),80);
 }
 function setChoice(group,value) {
   const hidden=group==='priority'?els.taskPriority:els.taskEnergy;hidden.value=value;
@@ -1344,11 +1297,11 @@ function actionOption({icon,title,sub='',end='',attrs='',className=''}){return `
 function showActionSheet(html){els.actionSheetContent.innerHTML=html;openSheet(els.actionSheet);}
 
 function openWhatsNew(){
-  showActionSheet(`${sheetHeader('Novedades','Organizador 5.1')}
+  showActionSheet(`${sheetHeader('Novedades','Organizador 6.0 RC1')}
     <div class="release-hero">
-      <span class="release-badge">STABILITY & POLISH</span>
-      <strong>Más estable. Más rápida. Más predecible.</strong>
-      <p>La 5.1 se centra en pulir la experiencia diaria: gestos, ventanas, duración opcional, sincronización y rendimiento.</p>
+      <span class="release-badge">FOUNDATION & RELIABILITY</span>
+      <strong>Una base más limpia para lo que viene.</strong>
+      <p>La 6.0 RC1 consolida la base técnica sin cambiar tu forma de trabajar: núcleo común, detección de plataforma centralizada y regresiones reproducibles.</p>
     </div>
     <div class="release-feature-grid">
       <article><span class="release-feature-icon">${ICON('clock')}</span><div><strong>Tiempo realmente opcional</strong><small>Las tareas pueden crearse sin estimación y registrar el tiempo real al completarlas.</small></div></article>
@@ -1716,7 +1669,6 @@ function resolveConflict(choice){const c=state.conflicts.shift();if(!c)return;co
 function detectRemoteConflicts(remoteTasks){const preserve=new Set();if(!state.sync.initialized)return preserve;const localMap=new Map(state.tasks.map(t=>[t.id,t])),baseline=state.sync.baselineTasks||new Map();for(const remote of remoteTasks){const local=localMap.get(remote.id);if(!local||remote.lastDeviceId===state.sync.deviceId)continue;const localChanged=baseline.get(local.id)&&baseline.get(local.id)!==taskFingerprint(local);const remoteDiff=taskFingerprint(local)!==taskFingerprint(remote);if(localChanged&&remoteDiff){preserve.add(local.id);if(!state.conflicts.some(c=>c.local.id===local.id))state.conflicts.push({local:deepClone(local),remote:deepClone(remote)});}}if(state.conflicts.length)setTimeout(()=>{if(!document.querySelector('.modal-layer.is-open'))openConflictReview();},150);return preserve;}
 function updateLastOpened(){const previous=state.ui.lastOpenedDate;const today=todayISO();if(previous&&previous<today){const days=Math.max(0,dayDistance(today)-dayDistance(previous));state.ui.recoveryPendingDays=days>=3?days:0;}state.ui.lastOpenedDate=today;state.ui.lastOpenedAt=new Date().toISOString();saveUI();}
 function updateInstallStatus(){if(!els.installAppStatus)return;const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;if(standalone){els.installAppStatus.textContent='Ya está instalada';els.installAppBtn.disabled=true;}else if(state.installPrompt){els.installAppStatus.textContent='Instalar con un toque';els.installAppBtn.disabled=false;}else if(isIOS()){els.installAppStatus.textContent='Añadir a pantalla de inicio en Safari';els.installAppBtn.disabled=false;}else{els.installAppStatus.textContent='Disponible cuando el navegador lo permita';els.installAppBtn.disabled=false;}}
-function isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)||(/Macintosh/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1);}
 async function installPWA(){if(state.installPrompt){const prompt=state.installPrompt;state.installPrompt=null;await prompt.prompt();await prompt.userChoice;updateInstallStatus();return;}closeSheet(els.settingsSheet);if(isIOS()){showActionSheet(`${sheetHeader('Instalar en iPhone','Añadir a pantalla de inicio')}<div class="action-summary">En Safari: pulsa <strong>Compartir</strong> → <strong>Añadir a pantalla de inicio</strong>. iOS no permite lanzar ese cuadro automáticamente desde una web.</div><div class="sheet-actions"><button class="primary-btn" data-close-action>Entendido</button></div>`);}else{showActionSheet(`${sheetHeader('Instalar app','Tu navegador decide cuándo ofrecerla')}<div class="action-summary">La PWA ya incluye manifest, modo standalone y funcionamiento offline. Si el navegador no muestra instalación todavía, abre su menú y busca “Instalar aplicación”.</div><div class="sheet-actions"><button class="primary-btn" data-close-action>Entendido</button></div>`);}}
 
 async function syncGoogleCalendar(){const clientId=window.OPI_CONFIG&&window.OPI_CONFIG.googleClientId;if(!clientId){closeSheet(els.settingsSheet);showActionSheet(`${sheetHeader('Google Calendar','Falta una configuración única')}<div class="action-summary">Añade tu OAuth Client ID en <strong>config.js</strong>, habilita Google Calendar API y autoriza tu URL de GitHub Pages como origen. Nunca añadas un client secret al repositorio.</div><div class="sheet-actions"><button class="primary-btn" data-close-action>Entendido</button></div>`);return;}try{els.googleSyncStatus.textContent='Conectando…';await loadGoogleIdentity();const token=await getGoogleToken(clientId);state.googleAccessToken=token;const events=await fetchGoogleEvents(token);state.externalEvents=[...state.externalEvents.filter(e=>e.source!=='google'),...events];saveAll();render();els.googleSyncStatus.textContent=`Sincronizado · ${events.length} eventos`;toast('Google Calendar sincronizado.');}catch(error){console.error(error);els.googleSyncStatus.textContent='No se pudo conectar';toast('No se pudo sincronizar Google Calendar.');}}
@@ -1948,6 +1900,7 @@ document.addEventListener('pointerup',event=>{
 /* FAB: toque = tarea; pulsación larga = tres accesos rápidos.
    Los accesos del menú se resuelven en pointerdown para iOS/PWA: después de una
    pulsación larga Safari puede no sintetizar un click fiable sobre el segundo toque. */
+document.addEventListener('pointerdown',event=>{if(!els.fabMenu.hidden&&!event.target.closest?.('.fab-wrap')){els.fabMenu.hidden=true;els.fab.setAttribute('aria-expanded','false');state.fabLongPressed=false;cancelPendingFabPointer?.();}},{capture:true});
 let fabTimer=null;
 function cancelFabHold(){clearTimeout(fabTimer);fabTimer=null;els.fab.classList.remove('holding');}
 els.fab.addEventListener('pointerdown',event=>{
@@ -2079,14 +2032,14 @@ els.dayProfileBtn.addEventListener('click',openDayProfile);
 els.sequenceStartBtn.addEventListener('click',()=>{const q=[...state.sequenceCandidateIds];if(!q.length)return;closeSmartResults();openNowMode(q.shift(),q);});
 els.smartRecommendation.addEventListener('click',()=>{const type=els.smartRecommendation.dataset.recommendation;if(type==='space')openMakeSpace();else if(type==='tomorrow')openTomorrowReview();else if(type==='overdue')openOverdueReview();else if(type==='recovery')openRecoveryReview();else if(type==='stale')openStaleReview();else if(type==='inbox')openInboxReview();else if(type==='life')openLifeReview();else if(type==='performance')openPerformanceInsight();else if(type==='attention')openAttention();else if(type==='continue')openNowMode(state.ui.activeNowTaskId);});
 document.getElementById('closeSmartResults').addEventListener('click',closeSmartResults);
-els.contextIsland.addEventListener('click',()=>{if(state.islandLongPressed){state.islandLongPressed=false;return;}const action=els.contextIsland.dataset.islandAction;if(action==='space')openMakeSpace();else if(action==='close-day')openDayClose();else if(action==='gap')showQuickTime(Number(els.contextIsland.dataset.minutes||30));else if(action==='balance-week')applyWeekBalance();else openTaskSheet({category:['work','personal','study'].includes(state.route)?state.route:undefined});});
+els.contextIsland.addEventListener('click',()=>{if(state.islandLongPressed){state.islandLongPressed=false;return;}const action=els.contextIsland.dataset.islandAction;if(action==='space')openMakeSpace();else if(action==='close-day')openDayClose();else if(action==='gap')showQuickTime(Number(els.contextIsland.dataset.minutes||30));else if(action==='balance-week')applyWeekBalance();else openTaskSheet({category:['work','personal','study'].includes(state.route)?state.route:undefined,lockCategory:['work','personal','study'].includes(state.route)});});
 els.undoBtn.addEventListener('click',undoLast);els.undoBar.addEventListener('pointerenter',pauseUndoTimer);els.undoBar.addEventListener('pointerleave',resumeUndoTimer);els.undoBar.addEventListener('pointerdown',pauseUndoTimer,{passive:true});els.undoBar.addEventListener('pointerup',resumeUndoTimer,{passive:true});els.toast.addEventListener('pointerenter',pauseToast);els.toast.addEventListener('pointerleave',resumeToast);
 
 els.taskScheduledDate.addEventListener('change',()=>{updateCapacityPreview();saveTaskDraft();});els.taskDuration.addEventListener('change',()=>{updateCapacityPreview();saveTaskDraft();});els.taskCategory.addEventListener('change',saveTaskDraft);els.taskScheduledTime.addEventListener('change',saveTaskDraft);
 els.taskForm.addEventListener('submit',event=>{
   event.preventDefault();const title=els.taskTitle.value.trim();if(!title)return;if(isActionLocked('task-form-submit'))return;const submitBtn=els.taskForm.querySelector('[type="submit"]');if(submitBtn)submitBtn.disabled=true;setTimeout(()=>{releaseActionLock('task-form-submit');if(submitBtn)submitBtn.disabled=false;},650);
   const editId=els.taskEditId.value,existing=state.tasks.find(t=>t.id===editId),snapshot=deepClone(state.tasks);
-  const data={title,category:els.taskCategory.value,priority:els.taskPriority.value,energy:els.taskEnergy.value,scheduledDate:els.taskScheduledDate.value,scheduledTime:els.taskScheduledTime.value,deadline:els.taskDeadline.value,duration:els.taskDuration.value===''?null:Number(els.taskDuration.value),recurrence:els.taskRecurrence.value,todayPriorityUntil:els.taskTodayPriority.checked?todayISO():'',nonNegotiableDate:els.taskNonNegotiable.checked?todayISO():'',project:els.taskProject?.value.trim()||'',outcome:els.taskOutcome?.value.trim()||'',dependsOnId:els.taskDependsOn?.value||'',context:els.taskContext?.value||'',modifiedAt:new Date().toISOString()};
+  const data={title,category:els.taskCategory.dataset.lockedCategory||els.taskCategory.value,priority:els.taskPriority.value,energy:els.taskEnergy.value,scheduledDate:els.taskScheduledDate.value,scheduledTime:els.taskScheduledTime.value,deadline:els.taskDeadline.value,duration:els.taskDuration.value===''?null:Number(els.taskDuration.value),recurrence:els.taskRecurrence.value,todayPriorityUntil:els.taskTodayPriority.checked?todayISO():'',nonNegotiableDate:els.taskNonNegotiable.checked?todayISO():'',project:els.taskProject?.value.trim()||'',outcome:els.taskOutcome?.value.trim()||'',dependsOnId:els.taskDependsOn?.value||'',context:els.taskContext?.value||'',modifiedAt:new Date().toISOString()};
   if(data.nonNegotiableDate&&!existing&&activeTasks().filter(t=>t.nonNegotiableDate===todayISO()).length>=3){data.nonNegotiableDate='';toast('Máximo 3 no negociables al día.');}
   if(data.priority==='high'&&state.settings.intelligentMode){const high=tasksOn(data.scheduledDate||todayISO()).filter(t=>t.id!==editId&&t.priority==='high').length;if(high>=Number(state.settings.maxHighPerDay||2))toast('Ese día ya tiene varias tareas de prioridad alta.');}
   if(existing){const before=deepClone(existing);Object.assign(existing,data);appendTaskHistory(existing,'edited',before);}
@@ -2105,9 +2058,12 @@ if(els.taskPriorityCycle)els.taskPriorityCycle.addEventListener('click',cycleCom
 if(els.taskVoiceBtn)els.taskVoiceBtn.addEventListener('click',()=>startSpeechCapture(els.taskTitle));
 if(els.taskHistoryBtn)els.taskHistoryBtn.addEventListener('click',()=>{const id=els.taskEditId.value;if(id){closeSheet(els.taskSheet);setTimeout(()=>openTaskHistory(id),40);}});
 if(els.quickVoiceBtn)els.quickVoiceBtn.addEventListener('click',()=>startSpeechCapture(els.quickTaskInput));
-els.taskTitle.addEventListener('input',()=>{if(!els.taskEditId.value){applyCategorySuggestion();const parsed=parseNaturalTask(els.taskTitle.value);if(parsed.category)els.taskCategory.value=parsed.category;if(parsed.duration){ensureSelectOption(els.taskDuration,parsed.duration);els.taskDuration.value=String(parsed.duration);}if(parsed.scheduledDate)els.taskScheduledDate.value=parsed.scheduledDate;if(parsed.deadline)els.taskDeadline.value=parsed.deadline;if(parsed.priority)setChoice('priority',parsed.priority);if(parsed.energy)setChoice('energy',parsed.energy);if(parsed.recurrence)els.taskRecurrence.value=parsed.recurrence;if(parsed.project&&els.taskProject)els.taskProject.value=parsed.project;if(parsed.context&&els.taskContext)els.taskContext.value=parsed.context;syncCompactTaskMeta();updateCapacityPreview();}});
+els.taskTitle.addEventListener('input',()=>{if(!els.taskEditId.value){const locked=els.taskCategory.dataset.lockedCategory;if(!locked)applyCategorySuggestion();const parsed=parseNaturalTask(els.taskTitle.value);if(parsed.category&&!locked)els.taskCategory.value=parsed.category;if(parsed.duration){ensureSelectOption(els.taskDuration,parsed.duration);els.taskDuration.value=String(parsed.duration);}if(parsed.scheduledDate)els.taskScheduledDate.value=parsed.scheduledDate;if(parsed.deadline)els.taskDeadline.value=parsed.deadline;if(parsed.priority)setChoice('priority',parsed.priority);if(parsed.energy)setChoice('energy',parsed.energy);if(parsed.recurrence)els.taskRecurrence.value=parsed.recurrence;if(parsed.project&&els.taskProject)els.taskProject.value=parsed.project;if(parsed.context&&els.taskContext)els.taskContext.value=parsed.context;syncCompactTaskMeta();updateCapacityPreview();}});
 els.taskScheduledDate.addEventListener('change',()=>{syncCompactTaskMeta();updateCapacityPreview();});els.taskDuration.addEventListener('change',updateCapacityPreview);
 if(els.planningBalanceBtn)els.planningBalanceBtn.addEventListener('click',applyWeekBalance);
+if(els.planningPrevWeekBtn)els.planningPrevWeekBtn.addEventListener('click',()=>shiftPlanningWeek(-1));
+if(els.planningNextWeekBtn)els.planningNextWeekBtn.addEventListener('click',()=>shiftPlanningWeek(1));
+if(els.planningThisWeekBtn)els.planningThisWeekBtn.addEventListener('click',resetPlanningWeek);
 if(els.weekendPlanBtn)els.weekendPlanBtn.addEventListener('click',openWeekendPlanning);
 if(els.workFocusBtn)els.workFocusBtn.addEventListener('click',openWorkFocusSetup);
 if(els.planningCleanBtn)els.planningCleanBtn.addEventListener('click',()=>{const stale=getStaleTasks().slice(0,8);if(!stale.length){toast('No hay pendientes antiguos que limpiar.');return;}showActionSheet(`${sheetHeader('Limpieza inteligente','Menos deuda de tareas')}<div class="action-list">${stale.map(t=>actionOption({icon:'spark',title:t.title,sub:getProcrastinationStep(t)||'Revisar',attrs:`data-procrastination="split" data-id="${t.id}"`})).join('')}</div>`);});
@@ -2169,7 +2125,7 @@ window.addEventListener('focus',refreshWorkFocusFromClock);
 window.addEventListener('pageshow',refreshWorkFocusFromClock);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshWorkFocusFromClock();});
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=5.1.1',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=6.0-rc1',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
 
 function auditCapabilities(){
   if(els.taskVoiceBtn&&!('SpeechRecognition'in window)&&!('webkitSpeechRecognition'in window))els.taskVoiceBtn.hidden=true;

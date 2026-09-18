@@ -218,6 +218,15 @@ function profileMultiplier(date){
   return {normal:1,intense:1.15,light:.78,rest:.52}[profile]||1;
 }
 function isWeekendDate(date){const d=parseISODate(date);return d&&[0,6].includes(d.getDay());}
+/* =========================================================
+   Adaptive Day Engine · Core
+   One deterministic interpretation of a day for Home, Ahora and Planning.
+   ========================================================= */
+function adeMedian(values){
+  const xs=values.map(Number).filter(Number.isFinite).sort((a,b)=>a-b);if(!xs.length)return null;
+  const m=Math.floor(xs.length/2);return xs.length%2?xs[m]:(xs[m-1]+xs[m])/2;
+}
+function adeConfidence(sampleCount){return sampleCount>=10?'high':sampleCount>=4?'medium':'low';}
 function getDayCapacity(date) {
   let base=Math.max(60, Number(state.settings.dailyCapacity||450)-getBusyMinutes(date));
   base*=profileMultiplier(date);
@@ -228,31 +237,49 @@ function getDayCapacity(date) {
   return Math.max(45,Math.round(base));
 }
 function getDurationRatio(category){
-  const samples=(state.learning.durationSamples||[]).filter(s=>s.category===category&&Number(s.estimated)>0&&Number(s.actual)>0).slice(-18);
+  const samples=(state.learning.durationSamples||[]).filter(s=>s.category===category&&Number(s.estimated)>0&&Number(s.actual)>0).slice(-24);
   if(samples.length<3)return 1;
-  const ratios=samples.map(s=>Math.max(.5,Math.min(2.2,s.actual/s.estimated))).sort((a,b)=>a-b);
-  const core=ratios.length>6?ratios.slice(1,-1):ratios;
-  return Math.max(.75,Math.min(1.75,core.reduce((a,b)=>a+b,0)/core.length));
+  const ratios=samples.map(s=>Math.max(.5,Math.min(2.2,Number(s.actual)/Number(s.estimated))));
+  const median=adeMedian(ratios)??1;
+  return Math.max(.75,Math.min(1.75,median));
 }
-function predictedDuration(task){
+function getDurationPrediction(task){
   const declared=task?.duration;
-  if(declared!==null&&declared!==''&&declared!==undefined&&Number.isFinite(Number(declared)))return Math.max(5,Math.round(Number(declared)*getDurationRatio(task.category)));
-  const samples=(state.learning.durationSamples||[]).filter(x=>x.category===task?.category&&Number(x.actual)>0).slice(-12);
-  if(samples.length>=3)return Math.max(5,Math.round(samples.reduce((a,b)=>a+Number(b.actual||0),0)/samples.length));
-  return 30;
+  const samples=(state.learning.durationSamples||[]).filter(x=>x.category===task?.category&&Number(x.actual)>0).slice(-24);
+  if(declared!==null&&declared!==''&&declared!==undefined&&Number.isFinite(Number(declared))){
+    const relevant=samples.filter(x=>Number(x.estimated)>0);
+    return {minutes:Math.max(5,Math.round(Number(declared)*getDurationRatio(task.category))),confidence:adeConfidence(relevant.length),samples:relevant.length,source:relevant.length>=3?'learned-ratio':'declared'};
+  }
+  const actuals=samples.map(x=>Number(x.actual)).filter(x=>x>0&&x<=720);
+  const robust=adeMedian(actuals);
+  return {minutes:Math.max(5,Math.round(robust??30)),confidence:adeConfidence(actuals.length),samples:actuals.length,source:actuals.length>=3?'category-history':'fallback'};
 }
+function predictedDuration(task){return getDurationPrediction(task).minutes;}
 function effectiveTaskLoadMinutes(task){
   const energy={low:.82,normal:1,high:1.24}[task.energy]||1;
   const priority={low:.92,medium:1,high:1.12}[task.priority]||1;
   const protectedToday=(task.nonNegotiableDate===todayISO()||task.todayPriorityUntil===todayISO())?1.04:1;
   return Math.round(predictedDuration(task)*energy*priority*protectedToday);
 }
+function getTaskFormalState(task){
+  if(task?.deletedAt)return 'deleted';if(task?.archivedAt)return 'cancelled';if(task?.completedAt)return 'completed';
+  if(task?.pausedAt||task?.sessionPausedAt)return 'paused';if(task?.startedAt||state.ui.activeNowTaskId===task?.id)return 'in_progress';return 'pending';
+}
+function getDynamicCapacity(date){
+  const nominal=getDayCapacity(date);if(date!==todayISO())return {nominal,remaining:nominal,elapsedRatio:0};
+  const now=new Date(),minute=now.getHours()*60+now.getMinutes(),start=8*60,end=20*60;
+  const elapsed=Math.max(0,Math.min(1,(minute-start)/(end-start)));
+  const completed=state.tasks.filter(t=>!t.deletedAt&&t.completedAt&&toISO(new Date(t.completedAt))===date).reduce((s,t)=>s+Number(t.actualDuration||predictedDuration(t)||0),0);
+  const timeRemaining=Math.max(0,end-minute);
+  const remaining=Math.max(30,Math.min(nominal-completed,timeRemaining));
+  return {nominal,remaining:Math.max(0,Math.round(remaining)),elapsedRatio:elapsed};
+}
 function getDayLoad(date, extraMinutes=0, excludeTaskId=null) {
   const dayTasks=tasksOn(date).filter(t=>t.id!==excludeTaskId);
   const planned=dayTasks.reduce((sum,t)=>sum+Number(t.duration||0),0)+extraMinutes;
   const mental=dayTasks.reduce((sum,t)=>sum+effectiveTaskLoadMinutes(t),0)+extraMinutes;
   const capacity=getDayCapacity(date);
-  return { planned, mental, capacity, percent: Math.round((mental/capacity)*100), busy:getBusyMinutes(date) };
+  return { planned, mental, capacity, percent: Math.round((mental/Math.max(1,capacity))*100), busy:getBusyMinutes(date) };
 }
 function loadStatus(percent) {
   if (percent <= 35) return {label:'Día ligero',short:'Ligero',emoji:'😌',level:'light'};
@@ -260,34 +287,45 @@ function loadStatus(percent) {
   if (percent <= 100) return {label:'Cargado',short:'Cargado',emoji:'😅',level:'busy'};
   return {label:'Sobrecargado',short:'Sobrecargado',emoji:'🫠',level:'over'};
 }
-
 function isTaskBlocked(task){
-  if(!task?.dependsOnId)return false;
-  const dep=state.tasks.find(t=>t.id===task.dependsOnId);
+  if(!task?.dependsOnId)return false;const dep=state.tasks.find(t=>t.id===task.dependsOnId);
   return Boolean(dep && !dep.completedAt && !dep.deletedAt && !dep.archivedAt);
 }
-function taskScore(task) {
-  let score = {high:42,medium:22,low:7}[task.priority] || 0;
-  const today=todayISO(),hour=new Date().getHours();
-  if(isTaskBlocked(task))score-=250;
-  if(task.todayPriorityUntil===today)score+=55;
-  if(task.nonNegotiableDate===today)score+=70;
-  if(task.inbox)score-=18;
-  if(task.kind==='reminder')score+=8;
-  if(task.deadline){const days=dayDistance(task.deadline);if(days<0)score+=120+Math.min(30,Math.abs(days)*5);else if(days===0)score+=75;else if(days===1)score+=42;else if(days<=7)score+=Math.max(8,30-days*3);}
-  if(task.scheduledDate){const days=dayDistance(task.scheduledDate);if(days<0)score+=48;else if(days===0)score+=58;else if(days===1)score+=19;}
+function getTemporalPriority(task,atDate=todayISO()){
+  let score={high:42,medium:22,low:7}[task.priority]||0;const today=atDate,hour=new Date().getHours();
+  const parts={declared:score,deadline:0,schedule:0,age:0,postponement:0,dependency:0,context:0};
+  if(isTaskBlocked(task)){parts.dependency=-250;score-=250;}
+  if(task.todayPriorityUntil===today)score+=55;if(task.nonNegotiableDate===today)score+=70;if(task.inbox)score-=18;if(task.kind==='reminder')score+=8;
+  if(task.deadline){const days=Math.round((parseISODate(task.deadline)-parseISODate(today))/86400000);if(days<0)parts.deadline=120+Math.min(30,Math.abs(days)*5);else if(days===0)parts.deadline=75;else if(days===1)parts.deadline=42;else if(days<=7)parts.deadline=Math.max(8,30-days*3);score+=parts.deadline;}
+  if(task.scheduledDate){const days=Math.round((parseISODate(task.scheduledDate)-parseISODate(today))/86400000);if(days<0)parts.schedule=48;else if(days===0)parts.schedule=58;else if(days===1)parts.schedule=19;score+=parts.schedule;}
   if(task.scheduledDate===today&&task.scheduledTime){const now=hour*60+new Date().getMinutes(),diff=parseTimeMinutes(task.scheduledTime)-now;if(diff>=-30&&diff<=120)score+=24;}
-  score+=Math.min(40,task.snoozeCount*8);
-  if(predictedDuration(task)<=30)score+=6;
-  if(task.recurrence!=='none')score+=2;
-  const success=(state.learning.completionHours||{})[task.category];
-  if(Array.isArray(success)&&success.length>=3){const avg=success.slice(-12).reduce((a,b)=>a+b,0)/Math.min(12,success.length);if(Math.abs(hour-avg)<=2)score+=8;}
+  parts.postponement=Math.min(40,Number(task.snoozeCount||0)*8);score+=parts.postponement;
+  const created=(task.createdAt||'').slice(0,10);if(created){const age=Math.max(0,Math.round((parseISODate(today)-parseISODate(created))/86400000));parts.age=Math.min(18,Math.floor(age/7)*2);score+=parts.age;}
+  if(predictedDuration(task)<=30)score+=6;if(task.recurrence!=='none')score+=2;
+  const success=(state.learning.completionHours||{})[task.category];if(Array.isArray(success)&&success.length>=3){const avg=success.slice(-12).reduce((a,b)=>a+b,0)/Math.min(12,success.length);if(Math.abs(hour-avg)<=2){parts.context+=8;score+=8;}}
   if(state.settings.weekendMode&&isWeekendDate(today)){if(task.category==='personal')score+=14;if(task.category==='work')score-=12;}
   if(state.settings.workFreeWeekend&&isWeekendDate(today)&&task.category==='work'&&!task.deadline)score-=55;
   if(state.lowEnergyMode){if(task.energy==='low')score+=24;else if(task.energy==='high')score-=22;}
-  if(task.lastDecisionReason==='energy'&&hour>=19)score-=10;
-  const preferred=contextFromTask(task); if(preferred==='focus'&&hour>=8&&hour<=12)score+=5;
-  return score;
+  if(task.lastDecisionReason==='energy'&&hour>=19)score-=10;const preferred=contextFromTask(task);if(preferred==='focus'&&hour>=8&&hour<=12)score+=5;
+  return {score,parts};
+}
+function taskScore(task){return getTemporalPriority(task).score;}
+function getTaskRiskBreakdown(task,date=todayISO()){
+  if(!task||task.completedAt||task.deletedAt||task.archivedAt)return {deadlineRisk:0,capacityRisk:0,postponementRisk:0,dependencyRisk:0,score:0,level:'none'};
+  let deadlineRisk=0,capacityRisk=0;const dur=predictedDuration(task);
+  if(task.deadline){const days=Math.round((parseISODate(task.deadline)-parseISODate(date))/86400000);deadlineRisk=days<0?100:days===0?75:days===1?48:days<=3?28:0;const horizon=Math.max(1,Math.min(7,days+1));const capacity=Array.from({length:horizon},(_,i)=>Math.max(0,getDayCapacity(addDays(date,i))-getDayLoad(addDays(date,i)).mental)).reduce((a,b)=>a+b,0);if(capacity<dur)capacityRisk=38;}
+  const postponementRisk=Math.min(35,Number(task.snoozeCount||0)*7),dependencyRisk=isTaskBlocked(task)?38:0,energyRisk=task.energy==='high'?6:0;
+  const score=deadlineRisk+capacityRisk+postponementRisk+dependencyRisk+energyRisk,level=score>=80?'high':score>=45?'medium':'low';
+  return {deadlineRisk,capacityRisk,postponementRisk,dependencyRisk,energyRisk,score,level};
+}
+function getDayState(date=todayISO()){
+  const tasks=tasksOn(date).filter(t=>!t.deletedAt&&!t.archivedAt),remaining=tasks.filter(t=>!t.completedAt),completed=tasks.filter(t=>t.completedAt),blocked=remaining.filter(isTaskBlocked),overdue=remaining.filter(isOverdueDeadline);
+  const load=getDayLoad(date),dynamic=getDynamicCapacity(date),remainingLoad=remaining.reduce((s,t)=>s+effectiveTaskLoadMinutes(t),0),remainingPercent=Math.round(remainingLoad/Math.max(1,dynamic.remaining)*100);
+  const risks=remaining.map(t=>getTaskRiskBreakdown(t,date));const overallRisk=risks.length?Math.max(...risks.map(r=>r.score)):0;
+  const candidates=remaining.filter(t=>!t.inbox&&!isTaskBlocked(t)).slice().sort((a,b)=>getTemporalPriority(b,date).score-getTemporalPriority(a,date).score||String(a.id).localeCompare(String(b.id)));
+  const status=remaining.length===0?'finished':remainingPercent>115?'disrupted':remainingPercent>100?'overloaded':remainingPercent>82?'tight':remainingPercent<40?'underloaded':'balanced';
+  const sampleCount=(state.learning.durationSamples||[]).length;
+  return {date,status,capacity:dynamic,plannedMinutes:load.planned,predictedMinutes:load.mental,remainingMinutes:remainingLoad,completedMinutes:completed.reduce((s,t)=>s+Number(t.actualDuration||predictedDuration(t)),0),capacityRatio:remainingPercent,mentalLoad:load.mental,remainingTasks:remaining,completedTasks:completed,blockedTasks:blocked,overdueTasks:overdue,nextTask:candidates[0]||null,topThree:candidates.slice(0,3),risk:{score:overallRisk,level:overallRisk>=80?'high':overallRisk>=45?'medium':'low'},confidence:adeConfidence(sampleCount)};
 }
 function getTopCandidates() { return activeTasks().filter(t=>!t.inbox).slice().sort((a,b)=>taskScore(b)-taskScore(a)||(a.deadline||'9999').localeCompare(b.deadline||'9999')); }
 function ensureDailyFocus() {
@@ -388,8 +426,9 @@ function getMiniAgendaText() {
   return upcoming.map(i=>`${i.time} ${i.title}`).join(' · ');
 }
 function getNextBestAction() {
+  const dayState=getDayState(todayISO());
   let candidates=getFocusTasks().filter(t=>!t.completedAt&&!t.archivedAt&&!t.deletedAt&&!t.inbox&&!isTaskBlocked(t));
-  if(!candidates.length)candidates=getTopCandidates().filter(t=>!t.inbox&&!isTaskBlocked(t)).slice(0,10);
+  if(!candidates.length)candidates=dayState.remainingTasks.filter(t=>!t.inbox&&!isTaskBlocked(t)).sort((a,b)=>getTemporalPriority(b).score-getTemporalPriority(a).score).slice(0,10);
   const gap=getUsableGaps(todayISO())[0],available=gap?.duration||Math.max(15,getDayCapacity(todayISO())-getDayLoad(todayISO()).mental);
   const nowMinutes=new Date().getHours()*60+new Date().getMinutes();
   return candidates.slice().sort((a,b)=>{
@@ -418,7 +457,7 @@ function getWeeklyPlanningInsight(){
 }
 function getRecommendation() {
   const today=getDayLoad(todayISO());
-  if(today.percent>100){const moves=getMoveSuggestions(todayISO());const current=today.percent;let after=current;if(moves.length){const moved=moves.reduce((s,x)=>s+effectiveTaskLoadMinutes(x.task),0);after=Math.max(0,Math.round(((today.mental-moved)/today.capacity)*100));}return {type:'space',className:'danger',text:`😅 ${moves.length?`Mover ${moves.length} → ${after}%`:'Vas justo hoy'}`,action:'Hazme hueco'};}
+  if(today.percent>100){const moves=getMoveSuggestions(todayISO());const current=today.percent;let after=current;if(moves.length){const moved=moves.reduce((s,x)=>s+effectiveTaskLoadMinutes(x.task),0);after=Math.max(0,Math.round(((today.mental-moved)/today.capacity)*100));}return {type:'space',className:'danger',text:`😅 ${moves.length?`Mover ${moves.length} → ${after}%`:'Vas justo/a hoy'}`,action:'Hazme hueco'};}
   if(state.ui.recoveryPendingDays>=3){const r=getRecoverySummary();if(r.important.length||r.movable.length||r.stale.length)return {type:'recovery',className:'warning',text:`Volver sin agobios · ${r.important.length} importantes`,action:'Ordenar'};}
   const inbox=activeTasks().filter(t=>t.inbox);if(inbox.length>=3)return {type:'inbox',className:'',text:`${inbox.length} cosas por colocar`,action:'Ordenar'};
   const important=getImportantTasks(),overdue=important.filter(isOverdueDeadline);if(overdue.length)return {type:'overdue',className:'warning',text:`⏰ ${overdue.length} ${overdue.length===1?'tarea vencida':'tareas vencidas'}`,action:'Revisar'};
@@ -457,11 +496,9 @@ function findFlexibleRecurrenceDate(task,base){
   return best;
 }
 function getTaskRisk(task){
-  if(!task||task.completedAt||task.deletedAt||task.archivedAt)return {level:'none',score:0,label:'Sin riesgo'};
-  let score=0;const dur=predictedDuration(task);
-  if(task.deadline){const days=dayDistance(task.deadline);if(days<0)score+=100;else if(days===0)score+=75;else if(days===1)score+=48;else if(days<=3)score+=28;const capacity=Array.from({length:Math.max(1,Math.min(7,days+1))},(_,i)=>Math.max(0,getDayCapacity(addDays(todayISO(),i))-getDayLoad(addDays(todayISO(),i)).mental)).reduce((a,b)=>a+b,0);if(capacity<dur)score+=38;}
-  score+=Math.min(35,task.snoozeCount*7);if(isTaskBlocked(task))score+=38;if(task.energy==='high')score+=6;
-  return score>=80?{level:'high',score,label:'En riesgo'}:score>=45?{level:'medium',score,label:'Va justo'}:{level:'low',score,label:'Con margen'};
+  const r=getTaskRiskBreakdown(task);
+  if(r.level==='none')return {level:'none',score:0,label:'Sin riesgo',parts:r};
+  return {level:r.level,score:r.score,label:r.level==='high'?'En riesgo':r.level==='medium'?'Va justo':'Con margen',parts:r};
 }
 function getPersonalBufferInsight(){
   const samples=(state.learning.durationSamples||[]).slice(-30);if(samples.length<4)return null;
@@ -1033,7 +1070,7 @@ function renderPremiumModes(){
   }
 }
 function renderHome() {
-  const today=todayISO(),hour=new Date().getHours(),load=getDayLoad(today),status=loadStatus(load.percent),focus=getFocusTasks();
+  const today=todayISO(),hour=new Date().getHours(),dayState=getDayState(today),load=getDayLoad(today),status=loadStatus(dayState.capacityRatio),focus=getFocusTasks();
   els.homeCard.dataset.loadLevel=status.level;els.loadEmoji.textContent=status.emoji;els.loadStatus.textContent=status.short;els.capacityContext.textContent=`${formatMinutes(load.mental)} / ${formatMinutes(load.capacity)}`;
   const profile=(state.ui.dayProfileDate===today?state.ui.dayProfile:state.settings.defaultProfile)||'normal';
   els.dayProfileLabel.textContent={normal:'Normal',intense:'Intenso',light:'Ligero',rest:'Descanso'}[profile]||'Normal';
@@ -1297,11 +1334,11 @@ function actionOption({icon,title,sub='',end='',attrs='',className=''}){return `
 function showActionSheet(html){els.actionSheetContent.innerHTML=html;openSheet(els.actionSheet);}
 
 function openWhatsNew(){
-  showActionSheet(`${sheetHeader('Novedades','Organizador 6.0 RC1')}
+  showActionSheet(`${sheetHeader('Novedades','Organizador 6.0 RC2')}
     <div class="release-hero">
       <span class="release-badge">FOUNDATION & RELIABILITY</span>
       <strong>Una base más limpia para lo que viene.</strong>
-      <p>La 6.0 RC1 consolida la base técnica sin cambiar tu forma de trabajar: núcleo común, detección de plataforma centralizada y regresiones reproducibles.</p>
+      <p>La 6.0 RC2 consolida la base técnica sin cambiar tu forma de trabajar: núcleo común, detección de plataforma centralizada y regresiones reproducibles.</p>
     </div>
     <div class="release-feature-grid">
       <article><span class="release-feature-icon">${ICON('clock')}</span><div><strong>Tiempo realmente opcional</strong><small>Las tareas pueden crearse sin estimación y registrar el tiempo real al completarlas.</small></div></article>
@@ -1538,7 +1575,7 @@ function openSettings(){
 }
 function openResetAppConfirmation(){
   closeSheet(els.settingsSheet);
-  showActionSheet(`${sheetHeader('Resetear aplicación','Empezar desde cero')}<div class="action-summary">Se borrarán todas las tareas, ajustes, historial y memoria de Organizador. Si tienes una cuenta sincronizada, también se vaciarán sus datos de Firestore. La cuenta de acceso se conserva.</div><div class="sheet-actions"><button class="ghost-btn" data-close-action>Cancelar</button><button class="primary-btn danger-btn" data-confirm-reset-app>Resetear todo</button></div>`);
+  showActionSheet(`${sheetHeader('Resetear aplicación','Empezar desde cero')}<div class="action-summary">Se borrará el historial completo de Organizador: tareas presentes, completadas, pasadas y futuras; papelera; aprendizaje de duraciones; decisiones; sesiones; calendario importado; ajustes, borradores, diagnóstico y memoria local. Si tienes una cuenta sincronizada, también se vaciarán las tareas y metadatos de Organizador en Firestore. Solo se conserva la cuenta de acceso.</div><div class="sheet-actions"><button class="ghost-btn" data-close-action>Cancelar</button><button class="primary-btn danger-btn" data-confirm-reset-app>Resetear todo</button></div>`);
 }
 async function resetApplicationMemory(){
   closeActionSheet();
@@ -1573,6 +1610,8 @@ async function resetApplicationMemory(){
       .filter(Boolean)
       .filter(key=>key.startsWith('opi_'))
       .forEach(key=>localStorage.removeItem(key));
+    // Reset local app memory completely. Keep only the authenticated Firebase account/session.
+    try{[...Array(sessionStorage.length).keys()].map(i=>sessionStorage.key(i)).filter(Boolean).filter(key=>key.startsWith('opi_')).forEach(key=>sessionStorage.removeItem(key));}catch(_){}
 
     state.tasks=[];
     state.settings={...DEFAULT_SETTINGS};
@@ -1588,6 +1627,14 @@ async function resetApplicationMemory(){
     state.nowQueue=[];
     state.learning=deepClone(DEFAULT_LEARNING);
     state.security={...DEFAULT_SECURITY};
+    state.conflicts=[];
+    state.pendingSpaceSuggestions=[];
+    state.sequenceCandidateIds=[];
+    state.planningSelection=new Set();
+    state.derivedCache.clear();
+    state.toastQueue=[];
+    state.toastActive=null;
+    state.googleAccessToken=null;
     state.undo=null;
     if(els.undoBar) els.undoBar.hidden=true;
 
@@ -2125,7 +2172,7 @@ window.addEventListener('focus',refreshWorkFocusFromClock);
 window.addEventListener('pageshow',refreshWorkFocusFromClock);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshWorkFocusFromClock();});
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=6.0-rc1',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=6.0-rc2',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
 
 function auditCapabilities(){
   if(els.taskVoiceBtn&&!('SpeechRecognition'in window)&&!('webkitSpeechRecognition'in window))els.taskVoiceBtn.hidden=true;

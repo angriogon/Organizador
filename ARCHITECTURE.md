@@ -1,4 +1,4 @@
-# Arquitectura OPI · v6.0 RC1
+# Arquitectura OPI · v6.0 RC2
 
 La rama 6.0 fija la dirección definitiva de Organizador: **capturar → planificar → hacer → adaptar**. Esta RC conserva el esquema de datos 6 y las rutas Firebase para que la actualización desde 5.x sea no destructiva.
 
@@ -18,3 +18,7 @@ La rama 6.0 fija la dirección definitiva de Organizador: **capturar → planifi
 
 ## Siguiente consolidación segura
 Extraer por etapas `tasks/`, `sync/`, `ui/overlays`, `ui/gestures` y `planning/`, acompañando cada extracción de tests. La migración de datos locales a IndexedDB se hará mediante copia + validación + fallback, nunca borrando `localStorage` automáticamente en la primera migración.
+
+
+## Adaptive Day Engine · RC2
+RC2 introduces the first unified deterministic ADE core: `getDayState()`, dynamic remaining capacity, robust median-based duration prediction, temporal priority, decomposed risk, confidence and formal task states. Existing screens progressively consume this shared core; no remote AI is required.

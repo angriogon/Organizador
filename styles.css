@@ -1255,3 +1255,16 @@ body.modal-open { position:fixed; width:100%; left:0; right:0; }
 :root[data-appearance="dark"] .icon-btn.subtle:hover svg,
 :root[data-appearance="dark"] .icon-btn.subtle:focus-visible svg,
 :root[data-appearance="dark"] .nav-item.active svg{opacity:1}
+
+
+/* v6.0 RC2 · completion control: stable 44px hit area, compact visual mark. */
+.task-item .swipe-content{grid-template-columns:44px minmax(0,1fr) auto;gap:6px}
+.task-check{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;border-radius:12px!important;display:grid!important;place-items:center!important}
+.task-check::before{width:18px!important;height:18px!important;border-radius:6px!important;border:1.5px solid #c8d0d7!important;background:#fff!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.task-check:hover::before,.task-check:focus-visible::before{border-color:#77838e!important;background:#f6f8f9!important}
+.task-item.is-done .task-check::before{background:#596673!important;border-color:#596673!important}
+.task-check svg{width:11px!important;height:11px!important;color:#fff!important}
+:root[data-appearance="dark"] .task-check::before{background:#171c21!important;border-color:#626e78!important;box-shadow:none}
+:root[data-appearance="dark"] .task-check:hover::before,:root[data-appearance="dark"] .task-check:focus-visible::before{background:#222a31!important;border-color:#98a3ad!important}
+:root[data-appearance="dark"] .task-item.is-done .task-check::before{background:#89949e!important;border-color:#89949e!important}
+@media(max-width:760px){.task-item .swipe-content{grid-template-columns:44px minmax(0,1fr) auto;gap:4px}.task-check::before{width:19px!important;height:19px!important}}

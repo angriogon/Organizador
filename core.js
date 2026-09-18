@@ -1,6 +1,6 @@
 'use strict';
 
-/* OPI Core · v6.0 RC1
+/* OPI Core · v6.0 RC2
    Shared data contract and deterministic utilities. This file intentionally has
    no UI or Firebase dependencies so it can be regression-tested in isolation. */
 
@@ -9,7 +9,7 @@ const LEGACY_STORAGE_KEY = 'opi_tasks_v1';
 const SETTINGS_KEY = 'opi_settings_v2';
 const EXTERNAL_EVENTS_KEY = 'opi_external_events_v2';
 const UI_KEY = 'opi_ui_v3';
-const CACHE_VERSION = '6.0-rc1';
+const CACHE_VERSION = '6.0-rc2';
 const SYNC_META_KEY = 'opi_sync_meta_v41';
 const CLOUD_BACKUP_PREFIX = 'opi_prefirebase_backup_v41_';
 const CLOUD_SCHEMA_VERSION = 6;

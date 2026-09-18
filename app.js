@@ -5,7 +5,7 @@ const LEGACY_STORAGE_KEY = 'opi_tasks_v1';
 const SETTINGS_KEY = 'opi_settings_v2';
 const EXTERNAL_EVENTS_KEY = 'opi_external_events_v2';
 const UI_KEY = 'opi_ui_v3';
-const CACHE_VERSION = '5.1.0';
+const CACHE_VERSION = '5.1.1';
 const SYNC_META_KEY = 'opi_sync_meta_v41';
 const CLOUD_BACKUP_PREFIX = 'opi_prefirebase_backup_v41_';
 const CLOUD_SCHEMA_VERSION = 6;
@@ -49,7 +49,7 @@ function saveLearning(){ try{localStorage.setItem(LEARNING_KEY,JSON.stringify(st
 function loadSecurity(){ try{return {...DEFAULT_SECURITY,...JSON.parse(localStorage.getItem(SECURITY_KEY)||'{}')};}catch(_){return {...DEFAULT_SECURITY};} }
 function saveSecurity(){ try{localStorage.setItem(SECURITY_KEY,JSON.stringify(state.security));}catch(_){} }
 function maybePersistDailyBackup(){
-  try{if(typeof state==='undefined'||!state.tasks)return;const key='opi_auto_backup_v50',today=new Date().toISOString().slice(0,10),existing=JSON.parse(localStorage.getItem(key)||'{}');if(existing.date===today)return;localStorage.setItem(key,JSON.stringify({date:today,schemaVersion:DATA_SCHEMA_VERSION,tasks:state.tasks,settings:state.settings}));state.ui.lastAutoBackupAt=new Date().toISOString();}catch(_){}
+  try{if(typeof state==='undefined'||!state.tasks)return;const key='opi_auto_backup_v50',today=todayISO(),existing=JSON.parse(localStorage.getItem(key)||'{}');if(existing.date===today)return;localStorage.setItem(key,JSON.stringify({date:today,schemaVersion:DATA_SCHEMA_VERSION,tasks:state.tasks,settings:state.settings}));state.ui.lastAutoBackupAt=new Date().toISOString();}catch(_){}
 }
 function migrateSchema(){
   const current=Number(localStorage.getItem(DATA_SCHEMA_KEY)||1);
@@ -219,7 +219,14 @@ function toISO(date) {
 }
 function parseISODate(iso) { if (!iso) return null; const [y,m,d] = iso.split('-').map(Number); return new Date(y,m-1,d); }
 function addDays(iso,n) { const d = parseISODate(iso || todayISO()); d.setDate(d.getDate()+n); return toISO(d); }
-function addMonths(iso,n) { const d = parseISODate(iso || todayISO()); d.setMonth(d.getMonth()+n); return toISO(d); }
+function addMonths(iso,n) {
+  const source=parseISODate(iso || todayISO());
+  const day=source.getDate();
+  const target=new Date(source.getFullYear(),source.getMonth()+Number(n||0),1);
+  const lastDay=new Date(target.getFullYear(),target.getMonth()+1,0).getDate();
+  target.setDate(Math.min(day,lastDay));
+  return toISO(target);
+}
 function startOfMonth(date) { return new Date(date.getFullYear(), date.getMonth(), 1); }
 function formatMinutes(minutes) {
   if (minutes === null || minutes === '' || minutes === undefined || !Number.isFinite(Number(minutes))) return 'Sin estimar';
@@ -604,7 +611,7 @@ function cycleCompactDate(){const t=todayISO(),m=addDays(t,1),cur=els.taskSchedu
 function cycleCompactPriority(){const order=['medium','high','low'],i=order.indexOf(els.taskPriority.value);setChoice('priority',order[(i+1)%order.length]);}
 function getSuggestedCategoryFromText(){const parsed=parseNaturalTask(els.taskTitle.value);return parsed.category||suggestCategoryForTitle(els.taskTitle.value);}
 function cleanupOldTrash(){const cutoff=Date.now()-30*86400000;const before=state.tasks.length;state.tasks=state.tasks.filter(t=>!t.deletedAt||new Date(t.deletedAt).getTime()>cutoff);if(state.tasks.length!==before)saveAll();}
-function createWeeklySnapshot(){const key=new Date().toISOString().slice(0,10),list=state.learning.weeklySnapshots||[];if(list.at(-1)?.date===key)return;list.push({date:key,planned:Array.from({length:7},(_,i)=>getDayLoad(addDays(todayISO(),i)).percent),active:activeTasks().length});state.learning.weeklySnapshots=list.slice(-26);saveLearning();}
+function createWeeklySnapshot(){const key=todayISO(),list=state.learning.weeklySnapshots||[];if(list.at(-1)?.date===key)return;list.push({date:key,planned:Array.from({length:7},(_,i)=>getDayLoad(addDays(todayISO(),i)).percent),active:activeTasks().length});state.learning.weeklySnapshots=list.slice(-26);saveLearning();}
 function openTaskHistory(id){const t=state.tasks.find(x=>x.id===id);if(!t)return;const rows=(t.history||[]).slice().reverse();showActionSheet(`${sheetHeader('Historial',t.title)}<div class="history-list">${rows.map(h=>`<div><strong>${escapeHTML(({created:'Creada',edited:'Editada',completed:'Completada',deleted:'Papelera',restored:'Restaurada',paused:'Pausada','auto-split':'Dividida','rebalanced':'Reequilibrada'})[h.type]||h.type)}</strong><span>${new Intl.DateTimeFormat('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(h.at))}</span></div>`).join('')||'<div class="premium-empty">Sin historial todavía.</div>'}</div>`);}
 function showProcrastinationWizard(id){const t=state.tasks.find(x=>x.id===id);if(!t)return;showActionSheet(`${sheetHeader('Desbloquear',t.title)}<div class="action-summary">${escapeHTML(getProcrastinationStep(t)||'Elige lo que más se parece a lo que ocurre.')}</div><div class="action-list">${actionOption({icon:'split',title:'Demasiado grande',sub:'Crear una primera acción mínima.',attrs:`data-procrastination="split" data-id="${id}"`})}${actionOption({icon:'spark',title:'Poco claro',sub:'Convertirla en un siguiente paso.',attrs:`data-procrastination="clarify" data-id="${id}"`})}${actionOption({icon:'bolt',title:'Sin energía',sub:'Buscar otro hueco mejor.',attrs:`data-procrastination="energy" data-id="${id}"`})}</div>`);}
 function handleProcrastination(id,type){const t=state.tasks.find(x=>x.id===id);if(!t)return;if(type==='split'){proposeTinyFirstStep(t);closeActionSheet();}else if(type==='clarify'){mutateWithUndo('Tarea aclarada',()=>{if(!/^Siguiente:/.test(t.title))t.title=`Siguiente: ${t.title}`;t.duration=t.duration==null?15:Math.min(15,t.duration);appendTaskHistory(t,'edited');});closeActionSheet();}else{recordPauseReason(t,'energy');applySnooze(id,findNextGap(t));}}
@@ -1466,8 +1473,8 @@ function pushUndo(label,snapshot){
   const item={snapshot,label,expiresAt:Date.now()+UNDO_TIMEOUT_MS};state.undoStack=(state.undoStack||[]).filter(x=>x.expiresAt>Date.now()).slice(-4);state.undoStack.push(item);state.undo=item;
   els.undoText.textContent=`${label}${state.undoStack.length>1?` · ${state.undoStack.length} acciones`:''}`;els.undoBar.hidden=false;requestAnimationFrame(()=>els.undoBar.classList.add('show'));armUndoTimer();
 }
-function mutateWithUndo(label,mutator,{haptic=true}={}){if(isActionLocked(`mutate:${label}`))return;const snapshot=deepClone(state.tasks);try{mutator();touchChangedTasks(snapshot);saveAll();render();pushUndo(label,snapshot);if(haptic)buzz(9);maybeCelebrateFocus();}finally{setTimeout(()=>releaseActionLock(`mutate:${label}`),ACTION_LOCK_MS);}}
-function animatedMutation(id,type,label,mutator){if(isActionLocked(`task:${id}`))return;const rows=[...document.querySelectorAll(`[data-task-id="${CSS.escape(id)}"]`)];rows.forEach(r=>r.classList.add(type));const delay=reduceMotion()?0:145;setTimeout(()=>{releaseActionLock(`task:${id}`);mutateWithUndo(label,mutator);},delay);}
+function mutateWithUndo(label,mutator,{haptic=true,lockKey=''}={}){const key=lockKey||`mutate:${label}`;if(isActionLocked(key))return;const snapshot=deepClone(state.tasks);try{mutator();touchChangedTasks(snapshot);saveAll();render();pushUndo(label,snapshot);if(haptic)buzz(9);maybeCelebrateFocus();}finally{setTimeout(()=>releaseActionLock(key),ACTION_LOCK_MS);}}
+function animatedMutation(id,type,label,mutator){if(isActionLocked(`task:${id}`))return;const rows=[...document.querySelectorAll(`[data-task-id="${CSS.escape(id)}"]`)];rows.forEach(r=>r.classList.add(type));const delay=reduceMotion()?0:145;setTimeout(()=>{releaseActionLock(`task:${id}`);mutateWithUndo(label,mutator,{lockKey:`mutate-task:${id}`});},delay);}
 function undoLast(){const item=state.undoStack?.pop();if(!item)return;state.tasks=item.snapshot.map(normalizeTask);state.undo=state.undoStack.at(-1)||null;if(!state.undoStack.length)hideUndo();else{els.undoText.textContent=`${state.undo.label} · ${state.undoStack.length} acciones`;armUndoTimer();}saveAll();render();toast('Acción deshecha.');}
 function touchChangedTasks(before=[]){const old=new Map(before.map(t=>[t.id,JSON.stringify(t)])),now=new Date().toISOString();state.tasks.forEach(t=>{if(!old.has(t.id)||old.get(t.id)!==JSON.stringify(t))t.modifiedAt=now;});}
 function buzz(ms=8){if(state.settings.haptics&&navigator.vibrate)navigator.vibrate(ms);}
@@ -1485,7 +1492,7 @@ function completeTask(id,{actualMinutes=null,skipDurationPrompt=false}={}){
   }
   const started=task.startedAt||((state.ui.activeNowTaskId===id)?state.ui.activeNowStartedAt:'');
   if(actualMinutes==null&&started){actualMinutes=Math.max(1,Math.round((Date.now()-new Date(started).getTime())/60000));}
-  if(actualMinutes==null&&task.duration==null&&!skipDurationPrompt){openActualDurationPrompt(id);return;}
+  if(actualMinutes==null&&task.duration==null&&!skipDurationPrompt){releaseActionLock(`complete:${id}`);openActualDurationPrompt(id);return;}
   animatedMutation(id,'completing','Tarea completada',()=>{
     task.completedAt=new Date().toISOString();
     if(Number(actualMinutes)>0){const actual=Math.max(1,Math.round(Number(actualMinutes)));task.actualDuration=actual;task.sessions=[...(task.sessions||[]),{startedAt:started||'',endedAt:new Date().toISOString(),minutes:actual}].slice(-30);recordDurationSample(task,actual);state.learning.actualSessions=[...(state.learning.actualSessions||[]),{taskId:task.id,category:task.category,minutes:actual,at:new Date().toISOString()}].slice(-120);}
@@ -2084,7 +2091,7 @@ els.taskForm.addEventListener('submit',event=>{
   if(data.priority==='high'&&state.settings.intelligentMode){const high=tasksOn(data.scheduledDate||todayISO()).filter(t=>t.id!==editId&&t.priority==='high').length;if(high>=Number(state.settings.maxHighPerDay||2))toast('Ese día ya tiene varias tareas de prioridad alta.');}
   if(existing){const before=deepClone(existing);Object.assign(existing,data);appendTaskHistory(existing,'edited',before);}
   else {const created=createTask(data);appendTaskHistory(created,'created');state.tasks.push(created);learnCategoryCorrection(created);considerTaskForFocus(created);}
-  saveAll();clearTaskDraft();closeSheet(els.taskSheet);render();pushUndo(existing?'Tarea actualizada':'Tarea creada',snapshot);
+  saveAll();clearTaskDraft();document.activeElement?.blur?.();cancelActiveGesture();releaseSuppressedClicks();closeSheet(els.taskSheet,{restoreFocus:false});render();pushUndo(existing?'Tarea actualizada':'Tarea creada',snapshot);
   const load=data.scheduledDate?getDayLoad(data.scheduledDate):null;toast(load&&load.percent>100?`Ese día queda al ${load.percent}%`:(existing?'Cambios guardados.':'Tarea guardada.'));
   if(!existing&&isWindowsPWA()&&isWeekendNow()&&state.ui.weekendPlanning?.active)setTimeout(openWeekendPlanning,90);
 });
@@ -2132,17 +2139,15 @@ window.addEventListener('pageshow',()=>{const now=todayISO();if(state.ui.runtime
 
 /* iOS/PWA: evita el menú nativo de copiar/pegar al mantener pulsado.
    No cancelamos pointerdown/touchstart para conservar foco, teclado y gestos propios. */
-document.addEventListener('contextmenu', event => event.preventDefault(), {capture:true});
+document.addEventListener('contextmenu', event => {
+  if(event.target.closest?.('[data-no-contextmenu], .context-island, #fab')) event.preventDefault();
+}, {capture:true});
 document.addEventListener('dragstart', event => {
   if (!event.target.closest('input,textarea,select')) event.preventDefault();
 }, {capture:true});
 
-/* Bloqueo de zoom solicitado: pinch/doble toque/ctrl-wheel y atajos dentro de la página. */
-['gesturestart','gesturechange','gestureend'].forEach(name=>document.addEventListener(name,event=>event.preventDefault(),{passive:false}));
-document.addEventListener('touchmove',event=>{if(event.touches&&event.touches.length>1)event.preventDefault();},{passive:false});
-document.addEventListener('dblclick',event=>event.preventDefault(),{passive:false});
-window.addEventListener('wheel',event=>{if(event.ctrlKey)event.preventDefault();},{passive:false});
-window.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&['+','-','=','0'].includes(event.key)){event.preventDefault();return;}if(event.target.closest?.('input,textarea,select'))return;if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();openCommandPalette();return;}if(event.key==='/'){event.preventDefault();openUniversalSearch();return;}if(event.key.toLowerCase()==='n'){event.preventDefault();openTaskSheet();return;}if(event.key.toLowerCase()==='a'){event.preventDefault();openNowMode();return;}if(event.key.toLowerCase()==='t'){event.preventDefault();state.route='home';render();return;}});
+/* El zoom del navegador/SO permanece disponible por accesibilidad. */
+window.addEventListener('keydown',event=>{if(event.target.closest?.('input,textarea,select'))return;if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();openCommandPalette();return;}if(event.key==='/'){event.preventDefault();openUniversalSearch();return;}if(event.key.toLowerCase()==='n'){event.preventDefault();openTaskSheet();return;}if(event.key.toLowerCase()==='a'){event.preventDefault();openNowMode();return;}if(event.key.toLowerCase()==='t'){event.preventDefault();state.route='home';render();return;}});
 
 
 let homePull=null,islandHold=null;
@@ -2154,13 +2159,17 @@ els.contextIsland.addEventListener('pointerup',()=>{if(islandHold){clearTimeout(
 window.addEventListener('online',()=>{updateSyncUI();if(isCloudConfigured()&&!state.sync.auth){initCloudSync().catch(()=>{});return;}if(state.sync.user){state.sync.forceRetry=true;syncLocalToFirebase().catch(()=>{});setTimeout(()=>pullCloudNow({silent:true}).catch(()=>{}),350);}});
 window.addEventListener('offline',()=>{if(state.sync.user)setSyncStatus('offline','Sin conexión · los cambios quedarán pendientes.');else updateSyncUI();});
 
-setInterval(()=>{
+function refreshWorkFocusFromClock(){
   if(!isWindowsPWA())return;
-  const active=isWorkFocusActive();
-  if(active!==state.workFocusWasActive)render();
-},30000);
+  const before=state.workFocusWasActive,active=isWorkFocusActive();
+  if(active!==before){enforceWorkFocus();render();}
+}
+setInterval(refreshWorkFocusFromClock,15000);
+window.addEventListener('focus',refreshWorkFocusFromClock);
+window.addEventListener('pageshow',refreshWorkFocusFromClock);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshWorkFocusFromClock();});
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=5.1.0',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=5.1.1',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
 
 function auditCapabilities(){
   if(els.taskVoiceBtn&&!('SpeechRecognition'in window)&&!('webkitSpeechRecognition'in window))els.taskVoiceBtn.hidden=true;

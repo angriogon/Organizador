@@ -1,11 +1,11 @@
-const CACHE_NAME = 'opi-v5.1.0-shell-1';
+const CACHE_NAME = 'opi-v5.1.1-shell-1';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=5.1.0',
-  './app.js?v=5.1.0',
-  './config.js?v=5.1.0',
-  './manifest.webmanifest?v=5.1.0',
+  './styles.css?v=5.1.1',
+  './app.js?v=5.1.1',
+  './config.js?v=5.1.1',
+  './manifest.webmanifest?v=5.1.1',
   './browserconfig.xml',
   './favicon-v313.ico',
   './favicon.ico',
@@ -27,7 +27,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
+      .then(keys => Promise.all(keys.filter(key => key.startsWith('opi-') && key !== CACHE_NAME).map(key => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });

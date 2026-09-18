@@ -4,7 +4,7 @@
   "short_name": "Organizador",
   "description": "Planifica en web, captura y ejecuta en PWA. Inteligencia local, Firebase en tiempo real y experiencia minimalista.",
   "lang": "es",
-  "start_url": "./?source=pwa&v=5.1.0",
+  "start_url": "./?source=pwa&v=5.1.1",
   "scope": "./",
   "display": "standalone",
   "display_override": [
@@ -52,7 +52,7 @@
       "name": "Nueva tarea",
       "short_name": "Nueva",
       "description": "Captura una tarea",
-      "url": "./?action=new&v=5.1.0",
+      "url": "./?action=new&v=5.1.1",
       "icons": [
         {
           "src": "icons/icon-192-v313.png",
@@ -64,7 +64,7 @@
       "name": "Modo Ahora",
       "short_name": "Ahora",
       "description": "Empezar la siguiente acción",
-      "url": "./?action=now&v=5.1.0",
+      "url": "./?action=now&v=5.1.1",
       "icons": [
         {
           "src": "icons/icon-192-v313.png",
@@ -76,7 +76,7 @@
       "name": "Buscar",
       "short_name": "Buscar",
       "description": "Buscar en Organizador",
-      "url": "./?action=search&v=5.1.0",
+      "url": "./?action=search&v=5.1.1",
       "icons": [
         {
           "src": "icons/icon-192-v313.png",

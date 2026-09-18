@@ -1170,3 +1170,29 @@ body.modal-open { position:fixed; width:100%; left:0; right:0; }
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
 }
+
+/* =========================================================
+   v5.1.1 · Reliability & visual polish
+   ========================================================= */
+/* El título y el dictado son dos celdas reales: el foco no atraviesa el micrófono. */
+.quick-task-line{grid-template-columns:minmax(0,1fr) 48px;column-gap:6px;padding:4px 5px 4px 12px;overflow:hidden}
+.quick-task-line input{width:100%;min-width:0;outline:none!important;box-shadow:none!important;border:0!important}
+.quick-task-line input:focus-visible{outline:none!important;box-shadow:none!important}
+.quick-task-line .voice-btn{position:static!important;justify-self:end;flex:0 0 44px;width:44px;min-width:44px;height:44px;min-height:44px;border-radius:13px}
+.quick-input-wrap{grid-template-columns:minmax(0,1fr) 48px;column-gap:6px}
+.quick-input-wrap input{min-width:0}
+@media(max-width:760px){.quick-task-line{grid-template-columns:minmax(0,1fr) 50px}.quick-task-line .voice-btn{width:46px;min-width:46px}}
+
+/* Dark mode: menos blanco puro en iconografía/superficies secundarias, manteniendo contraste. */
+:root[data-appearance="dark"] .icon-btn svg,
+:root[data-appearance="dark"] .nav-item:not(.active) svg,
+:root[data-appearance="dark"] .quiet-icon svg{opacity:.78}
+:root[data-appearance="dark"] .icon-btn:hover svg,
+:root[data-appearance="dark"] .icon-btn:focus-visible svg,
+:root[data-appearance="dark"] .nav-item.active svg{opacity:1}
+:root[data-appearance="dark"] .ghost-btn,
+:root[data-appearance="dark"] .gap-chip{background:#252b31;color:#d9dee3;border-color:#343b43}
+:root[data-appearance="dark"] .capacity-context{background:#252b31!important;color:#d9dee3!important;border-color:#343b43!important}
+:root[data-appearance="dark"] .task-meta,
+:root[data-appearance="dark"] .focus-row small,
+:root[data-appearance="dark"] .micro-note{color:#a7b0b9}

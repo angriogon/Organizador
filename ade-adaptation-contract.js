@@ -12,7 +12,7 @@ const checks=[
  ['day close snapshot',/recordDayOutcomeSnapshot\(todayISO\(\)\)/.test(app)],
  ['absence signal',/setDaySignal\(today,'absence',true\)/.test(app)],
  ['work focus keeps home',/\['home','work'\]\.includes\(state\.route\)/.test(app)&&/data-route="home"/.test(css)],
- ['ghost click close guard',/blockClickThroughUntil=performance\.now\(\)\+520/.test(app)],
+ ['ghost click close guard',/blockClickThroughUntil=performance\.now\(\)\+700/.test(app)],
  ['compact undo',/Undo is a compact floating pill/.test(css)],
  ['compact desktop tasks',/Compact task rows/.test(css)],
  ['settings accordion',/function initCompactSettings\(/.test(app)&&/settings-collapse-head/.test(css)]

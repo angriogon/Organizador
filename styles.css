@@ -1384,3 +1384,82 @@ body.modal-open { position:fixed; width:100%; left:0; right:0; }
 /* Calendar day selectors are visibly interactive on touch devices. */
 .week-day,.week-capacity button,.day-number{touch-action:manipulation;cursor:pointer;position:relative;z-index:2}
 .week-day:active,.week-capacity button:active{transform:scale(.96)}
+
+/* =========================================================
+   v6.0.3 · iOS clarity + tap quarantine + minimal settings
+   ========================================================= */
+
+/* iOS standalone: a completely opaque top chrome.  Do not let content, gradients,
+   filters or composited layers bleed into the status/header region. */
+@media (display-mode:standalone) and (max-width:760px){
+  html,body{background:#f6f7f9!important;background-image:none!important}
+  body::before{content:"";position:fixed;z-index:8;inset:0 0 auto 0;height:calc(env(safe-area-inset-top,0px) + 68px);background:#f6f7f9!important;pointer-events:none;transform:translateZ(0)}
+  .main-content{isolation:isolate}
+  .topbar{z-index:15!important;background:#f6f7f9!important;background-image:none!important;box-shadow:none!important;filter:none!important;-webkit-filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transform:none!important;contain:paint;isolation:isolate}
+  .topbar::before,.topbar::after{display:none!important;content:none!important}
+  .topbar-copy,.topbar-copy *,.top-actions,.top-actions *{filter:none!important;-webkit-filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;text-shadow:none!important;transform:none}
+  .top-actions .icon-btn,.topbar .icon-btn,.topbar .quiet-icon{background:#fff!important;background-image:none!important;opacity:1!important;box-shadow:0 1px 4px rgba(35,45,55,.045)!important}
+}
+:root[data-appearance="dark"] body::before{background:#11161a!important}
+@media (display-mode:standalone) and (max-width:760px){
+  :root[data-appearance="dark"] html,:root[data-appearance="dark"] body,:root[data-appearance="dark"] .topbar{background:#11161a!important}
+  :root[data-appearance="dark"] .top-actions .icon-btn,:root[data-appearance="dark"] .topbar .icon-btn{background:#1b2025!important}
+}
+
+/* Closing layers remain hit-testable until they are removed.  This prevents the
+   release/click of the X from landing on the control geometrically underneath. */
+.modal-layer.is-closing,.now-mode.is-closing{opacity:0!important;pointer-events:auto!important}
+.modal-layer.is-closing .sheet,.modal-layer.is-closing .modal-backdrop,.now-mode.is-closing *{pointer-events:auto!important}
+
+/* Quick capture: content-sized card. It only grows into a scrollable editor when
+   Más opciones is opened. */
+@media(max-width:760px){
+  .modal-layer:has(.task-sheet:not(:has(.advanced-open))){align-items:center!important}
+  .modal-layer .task-sheet:not(:has(.advanced-open)){height:auto!important;min-height:0!important;max-height:none!important;width:min(92vw,410px)!important}
+  .modal-layer .task-sheet:not(:has(.advanced-open)) .compact-task-form{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;padding:12px 14px 13px!important}
+  .task-sheet:not(:has(.advanced-open)) .compact-save-row{margin-top:7px!important;padding:3px 0 0!important;position:static!important}
+  .task-sheet:not(:has(.advanced-open)) .sheet-header{margin-bottom:9px!important}
+  .task-sheet:not(:has(.advanced-open)) .task-advanced-toggle{margin-top:5px!important;margin-bottom:2px!important}
+  .task-sheet:has(.advanced-open){height:auto!important;max-height:calc(var(--visual-vh,100dvh) - 24px)!important}
+  .task-sheet:has(.advanced-open) .compact-task-form{height:auto!important;max-height:calc(var(--visual-vh,100dvh) - 48px)!important;overflow-y:auto!important}
+}
+
+/* Settings v6.0.3: quiet index + compact detail. No cards inside cards. */
+.settings-sheet{max-width:560px!important}
+.settings-sheet .sheet-body{padding:10px 18px 16px!important}
+.settings-sheet .sheet-handle{display:none!important}
+.settings-sheet .sheet-header{align-items:center!important;margin:0 0 8px!important;padding:0!important}
+.settings-sheet .sheet-header .section-kicker{display:none!important}
+.settings-sheet .sheet-header h2{font-size:18px!important;margin:0!important}
+.settings-sheet .settings-intro{display:none!important}
+.settings-sheet .settings-collapsible{border:0!important;border-bottom:1px solid var(--line)!important;margin:0!important;padding:0!important;background:transparent!important;border-radius:0!important}
+.settings-sheet .settings-collapsible:first-of-type{border-top:1px solid var(--line)!important}
+.settings-sheet .settings-collapse-head{min-height:45px!important;padding:0 2px!important;gap:8px!important}
+.settings-sheet .settings-collapse-head .section-kicker{width:auto!important;min-width:72px!important;margin:0!important;font-size:7px!important;letter-spacing:.12em!important}
+.settings-sheet .settings-collapse-head>span:nth-last-child(2){font-size:11.5px!important;font-weight:760!important}
+.settings-sheet .settings-collapse-head>span:last-child{font-size:12px!important}
+.settings-sheet .settings-collapsible.is-open{padding-bottom:9px!important}
+.settings-sheet .settings-collapsible.is-open>:not(.settings-collapse-head){margin-left:0!important;margin-right:0!important}
+.settings-sheet .form-grid{gap:7px!important}
+.settings-sheet .field{gap:3px!important;margin:0!important}
+.settings-sheet .field>span{font-size:9px!important}
+.settings-sheet .field input,.settings-sheet .field select{min-height:38px!important;height:38px!important;padding-block:0!important;border-radius:10px!important;font-size:11.5px!important}
+.settings-sheet .toggle-row{min-height:44px!important;margin:4px 0!important;padding:6px 8px!important;border-radius:10px!important;background:#f7f8f9!important}
+.settings-sheet .toggle-row strong{font-size:10.5px!important}
+.settings-sheet .toggle-row span{font-size:8.5px!important;line-height:1.25!important;margin-top:1px!important}
+.settings-sheet .toggle-row input{transform:scale(.86)}
+.settings-sheet .connect-grid{gap:5px!important}
+.settings-sheet .connect-btn{min-height:42px!important;padding:7px 9px!important;border-radius:10px!important;background:transparent!important}
+.settings-sheet .connect-btn strong{font-size:10px!important}.settings-sheet .connect-btn span{font-size:8px!important;margin-top:1px!important}
+.settings-sheet .sync-card{padding:8px!important;border-radius:11px!important}
+.settings-sheet .micro-note{font-size:8.5px!important;margin-top:6px!important}
+.settings-sheet .health-row{min-height:34px!important;margin-bottom:5px!important}
+.settings-sheet .sheet-actions{position:static!important;margin-top:9px!important;padding:0!important;background:transparent!important}
+.settings-sheet .sheet-actions .ghost-btn{display:none!important}
+.settings-sheet .sheet-actions .primary-btn{min-height:40px!important;width:100%!important}
+@media(max-width:760px){
+  .modal-layer:has(.settings-sheet){align-items:center!important;padding:12px!important}
+  .modal-layer .settings-sheet{width:min(94vw,520px)!important;height:auto!important;max-height:calc(var(--visual-vh,100dvh) - 24px)!important;margin:0!important;border-radius:22px!important}
+  .settings-sheet .sheet-body{height:auto!important;max-height:calc(var(--visual-vh,100dvh) - 44px)!important;overflow-y:auto!important;padding:10px 14px 14px!important}
+}
+:root[data-appearance="dark"] .settings-sheet .toggle-row{background:#20262c!important}

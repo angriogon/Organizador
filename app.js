@@ -1306,11 +1306,14 @@ function openSheet(el) {
 }
 function closeSheet(el,{restoreFocus=true}={}) {
   if (!el || !el.classList.contains('is-open') || state.overlay.phase==='closing') return;
-  state.overlay.phase='closing';state.blockClickThroughUntil=performance.now()+520;el.classList.add('is-closing');el.inert=true;
-  const finalize=()=>{el.classList.remove('is-open','is-closing');el.hidden=true;el.setAttribute('aria-hidden','true');releaseSuppressedClicks();cancelActiveGesture();state.overlay.active=null;state.overlay.phase='closed';syncModalLock();if(restoreFocus&&state.overlay.opener?.isConnected)state.overlay.opener.focus?.({preventScroll:true});state.overlay.opener=null;};
-  if(reduceMotion())finalize();else setTimeout(finalize,170);
+  /* Keep the invisible layer alive for the tail of the physical tap. On iOS, making
+     it inert/pointer-transparent immediately lets the synthetic click hit the icon
+     underneath the X. */
+  state.overlay.phase='closing';state.blockClickThroughUntil=performance.now()+700;el.classList.add('is-closing');
+  const finalize=()=>{el.classList.remove('is-open','is-closing');el.hidden=true;el.inert=true;el.setAttribute('aria-hidden','true');releaseSuppressedClicks();cancelActiveGesture();state.overlay.active=null;state.overlay.phase='closed';syncModalLock();if(restoreFocus&&state.overlay.opener?.isConnected)state.overlay.opener.focus?.({preventScroll:true});state.overlay.opener=null;};
+  setTimeout(finalize,reduceMotion()?120:260);
 }
-function closeActionSheet(){closeSheet(els.actionSheet);state.blockClickThroughUntil=performance.now()+220;}
+function closeActionSheet(){closeSheet(els.actionSheet);state.blockClickThroughUntil=Math.max(state.blockClickThroughUntil||0,performance.now()+700);}
 
 function syncCompactTaskMeta(){
   if(!els.taskDateCycle||!els.taskPriorityCycle)return;
@@ -1367,7 +1370,7 @@ function actionOption({icon,title,sub='',end='',attrs='',className=''}){return `
 function showActionSheet(html){els.actionSheetContent.innerHTML=html;openSheet(els.actionSheet);}
 
 function openWhatsNew(){
-  showActionSheet(`${sheetHeader('Novedades','Organizador 6.0.2')}
+  showActionSheet(`${sheetHeader('Novedades','Organizador 6.0.3')}
     <div class="release-hero">
       <span class="release-badge">FOUNDATION & RELIABILITY</span>
       <strong>Una base más limpia para lo que viene.</strong>
@@ -1954,6 +1957,11 @@ els.actionSheetContent.addEventListener('pointerdown',event=>{
 
 /* Cierre robusto de X/Cancelar en todas las hojas: pointerdown evita el click fantasma de iOS. */
 document.addEventListener('pointerdown',event=>{
+  /* Global post-close quarantine: a fresh pointer/click cannot activate the control
+     that was geometrically behind a closing sheet. */
+  if(performance.now()<(state.blockClickThroughUntil||0) && !event.target.closest?.('.modal-layer.is-open,.now-mode.is-open')){
+    event.preventDefault();event.stopPropagation();return;
+  }
   const close=event.target.closest?.('[data-close-sheet],[data-close-now]');
   if(!close)return;
   event.preventDefault();event.stopPropagation();releaseSuppressedClicks();
@@ -2230,7 +2238,7 @@ window.addEventListener('focus',refreshWorkFocusFromClock);
 window.addEventListener('pageshow',refreshWorkFocusFromClock);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshWorkFocusFromClock();});
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=6.0.2',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=6.0.3',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
 
 function initCompactSettings(){
   document.querySelectorAll('.settings-sheet .settings-section').forEach((section,index)=>{

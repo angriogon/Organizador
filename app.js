@@ -1367,10 +1367,10 @@ function openReminderSheet(){els.reminderForm.reset();els.reminderDate.value=tod
 
 function sheetHeader(kicker,title){return `<div class="sheet-handle"></div><div class="sheet-header"><div><span class="section-kicker">${escapeHTML(kicker)}</span><h2 class="action-title">${escapeHTML(title)}</h2></div><button type="button" class="icon-btn subtle" data-close-action>${ICON('close')}</button></div>`;}
 function actionOption({icon,title,sub='',end='',attrs='',className=''}){return `<button class="action-option ${className}" ${attrs}><span class="action-icon">${ICON(icon)}</span><span><strong>${escapeHTML(title)}</strong>${sub?`<small>${escapeHTML(sub)}</small>`:''}</span>${end?`<span class="action-end">${escapeHTML(end)}</span>`:'<span></span>'}</button>`;}
-function showActionSheet(html){els.actionSheetContent.innerHTML=html;openSheet(els.actionSheet);}
+function showActionSheet(html,{variant=''}={}){els.actionSheet.classList.remove('profile-day-dialog');if(variant)els.actionSheet.classList.add(variant);els.actionSheetContent.innerHTML=html;openSheet(els.actionSheet);}
 
 function openWhatsNew(){
-  showActionSheet(`${sheetHeader('Novedades','Organizador 6.0.3')}
+  showActionSheet(`${sheetHeader('Novedades','Organizador 6.0.5')}
     <div class="release-hero">
       <span class="release-badge">FOUNDATION & RELIABILITY</span>
       <strong>Una base más limpia para lo que viene.</strong>
@@ -1698,7 +1698,7 @@ async function resetApplicationMemory(){
 }
 
 function toggleTightDay(){const active=state.ui.tightDayDate!==todayISO();state.ui.tightDayDate=active?todayISO():'';setDaySignal(todayISO(),'tight',active);recordAdaptationEvent(active?'tight-day-on':'tight-day-off');saveUI();render();toast(active?'Capacidad de hoy reducida.':'Capacidad normal restaurada.');}
-function openDayProfile(){const current=(state.ui.dayProfileDate===todayISO()?state.ui.dayProfile:state.settings.defaultProfile)||'normal';showActionSheet(`${sheetHeader('Perfil del día','¿Qué ritmo tiene hoy?')}<div class="profile-grid">${[['normal','Normal','Tu capacidad habitual'],['intense','Intenso','Algo más de margen'],['light','Ligero','Menos compromisos'],['rest','Descanso','Solo lo esencial']].map(([v,t,s])=>`<button class="${current===v?'selected':''}" data-day-profile="${v}"><strong>${t}</strong><span>${s}</span></button>`).join('')}</div>`);}
+function openDayProfile(){const current=(state.ui.dayProfileDate===todayISO()?state.ui.dayProfile:state.settings.defaultProfile)||'normal';showActionSheet(`${sheetHeader('Perfil del día','¿Qué ritmo tiene hoy?')}<div class="profile-grid">${[['normal','Normal','Tu capacidad habitual'],['intense','Intenso','Algo más de margen'],['light','Ligero','Menos compromisos'],['rest','Descanso','Solo lo esencial']].map(([v,t,s])=>`<button class="${current===v?'selected':''}" data-day-profile="${v}"><strong>${t}</strong><span>${s}</span></button>`).join('')}</div>`,{variant:'profile-day-dialog'});}
 function setDayProfile(profile){state.ui.dayProfileDate=todayISO();state.ui.dayProfile=profile;saveUI();closeActionSheet();render();}
 function openRecoveryReview(){const r=getRecoverySummary();showActionSheet(`${sheetHeader('Volver sin agobios','Ordenar lo que quedó atrás')}<div class="action-summary"><strong>${r.important.length}</strong> siguen siendo importantes · <strong>${r.movable.length}</strong> pueden buscar hueco · <strong>${r.stale.length}</strong> quizá ya no tienen sentido.</div><div class="sheet-actions"><button class="ghost-btn" data-recovery-dismiss>Solo revisar</button><button class="primary-btn" data-recovery-apply>Repartir con margen</button></div>`);}
 function applyRecovery(){const r=getRecoverySummary();mutateWithUndo('Pendientes reorganizados',()=>{r.movable.forEach(t=>{t.scheduledDate=findNextGap(t);t.lastDecisionReason='recovery';t.adaptationType='systemReplanned';});});state.ui.recoveryPendingDays=0;saveUI();closeActionSheet();}
@@ -1944,30 +1944,30 @@ function runDataCommand(target){
   return false;
 }
 
-/* Cierre directo del panel de acciones: en iOS se resuelve en pointerdown para evitar
-   que un pointerup/click sintético quede atrapado por el propio gesto que abrió la hoja. */
-els.actionSheetContent.addEventListener('pointerdown',event=>{
-  const close=event.target.closest?.('[data-close-action]');
-  if(!close)return;
-  event.preventDefault();
-  event.stopPropagation();
-  state.ignorePointerUpPointerId=event.pointerId;
-  closeActionSheet();
-},{capture:true});
-
-/* Cierre robusto de X/Cancelar en todas las hojas: pointerdown evita el click fantasma de iOS. */
+/* iOS close guard: never remove a modal on pointerdown. The sheet stays above the
+   underlying toolbar for the whole physical tap and closes only on pointerup. */
 document.addEventListener('pointerdown',event=>{
-  /* Global post-close quarantine: a fresh pointer/click cannot activate the control
-     that was geometrically behind a closing sheet. */
   if(performance.now()<(state.blockClickThroughUntil||0) && !event.target.closest?.('.modal-layer.is-open,.now-mode.is-open')){
     event.preventDefault();event.stopPropagation();return;
   }
-  const close=event.target.closest?.('[data-close-sheet],[data-close-now]');
+  const close=event.target.closest?.('[data-close-sheet],[data-close-action],[data-close-now]');
   if(!close)return;
-  event.preventDefault();event.stopPropagation();releaseSuppressedClicks();
+  event.stopPropagation();
+  close.__opiClosePointerId=event.pointerId;
+},{capture:true});
+
+document.addEventListener('pointerup',event=>{
+  const close=event.target.closest?.('[data-close-sheet],[data-close-action],[data-close-now]');
+  if(!close || close.__opiClosePointerId!==event.pointerId)return;
+  event.preventDefault();event.stopImmediatePropagation();
+  close.__opiClosePointerId=null;
   state.ignorePointerUpPointerId=event.pointerId;
-  if(close.hasAttribute?.('data-close-now'))closeNowMode();else closeSheet(document.getElementById(close.dataset.closeSheet));
-  close.__opiPointerHandledUntil=performance.now()+650;
+  state.blockClickThroughUntil=performance.now()+850;
+  suppressClicksFor(850);
+  if(close.hasAttribute?.('data-close-action'))closeActionSheet();
+  else if(close.hasAttribute?.('data-close-now'))closeNowMode();
+  else closeSheet(document.getElementById(close.dataset.closeSheet));
+  close.__opiPointerHandledUntil=performance.now()+900;
 },{capture:true});
 
 /* iOS ejecuta estos controles en pointerup. click queda como respaldo para teclado/VoiceOver. */
@@ -2238,15 +2238,80 @@ window.addEventListener('focus',refreshWorkFocusFromClock);
 window.addEventListener('pageshow',refreshWorkFocusFromClock);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshWorkFocusFromClock();});
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=6.0.3',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=6.0.5',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
 
 function initCompactSettings(){
-  document.querySelectorAll('.settings-sheet .settings-section').forEach((section,index)=>{
-    if(section.dataset.compactReady)return;section.dataset.compactReady='1';section.classList.add('settings-collapsible');
-    const title=section.querySelector('h3');if(!title)return;const head=document.createElement('button');head.type='button';head.className='settings-collapse-head';head.innerHTML=`<span>${escapeHTML(title.textContent)}</span><span aria-hidden="true">⌄</span>`;title.replaceWith(head);
-    const kicker=section.querySelector(':scope > .section-kicker');if(kicker)head.prepend(kicker);
-    const open=false;section.classList.toggle('is-open',open);head.setAttribute('aria-expanded',String(open));head.addEventListener('click',()=>{const next=!section.classList.contains('is-open');document.querySelectorAll('.settings-sheet .settings-collapsible.is-open').forEach(x=>{if(x!==section){x.classList.remove('is-open');x.querySelector('.settings-collapse-head')?.setAttribute('aria-expanded','false');}});section.classList.toggle('is-open',next);head.setAttribute('aria-expanded',String(next));});
-  });
+  const sheet=document.querySelector('.settings-sheet');
+  const form=els.settingsForm;
+  if(!sheet||!form||form.dataset.settings605==='1')return;
+  form.dataset.settings605='1';
+
+  // v6.0.5: Settings behaves like a native settings hierarchy: a quiet index
+  // first, then one focused detail page. Existing controls keep their IDs and
+  // listeners; we only reorganize their DOM containers.
+  const sections=[...form.querySelectorAll(':scope > .settings-section')];
+  sections.forEach(section=>{section.classList.remove('settings-collapsible','is-open');section.querySelector('.settings-collapse-head')?.remove();section.hidden=true;});
+
+  const header=form.querySelector(':scope > .sheet-header');
+  if(header){
+    const title=header.querySelector('h2'); if(title)title.textContent='Ajustes';
+    const intro=header.querySelector('.settings-intro'); if(intro)intro.remove();
+  }
+
+  const actions=form.querySelector(':scope > .sheet-actions');
+  const primary=form.querySelector('.settings-primary');
+  const intelligence=form.querySelector('.premium-settings-section');
+  const sync=form.querySelector('.sync-settings-section');
+  const history=sections.find(x=>x.querySelector('#openTrashBtn'));
+  const calendars=sections.find(x=>x.querySelector('#googleSyncBtn'));
+  const install=sections.find(x=>x.querySelector('#installAppBtn'));
+  const security=sections.find(x=>x.querySelector('#localLockBtn'));
+  const data=sections.find(x=>x.querySelector('#exportBackupBtn'));
+  const health=sections.find(x=>x.querySelector('#copyDiagnosticsBtn'));
+
+  const takeControl=(id)=>{const el=document.getElementById(id);if(!el)return null;return el.closest('.field,.toggle-row')||el;};
+  const appearanceNodes=[takeControl('settingsTheme'),takeControl('settingsAppearance')].filter(Boolean);
+  const privacyNode=takeControl('settingsPrivacyMode');
+
+  const index=document.createElement('div');index.className='settings-index';index.setAttribute('aria-label','Categorías de ajustes');
+  const detail=document.createElement('div');detail.className='settings-detail';detail.hidden=true;
+  const detailHead=document.createElement('div');detailHead.className='settings-detail-head';
+  detailHead.innerHTML='<button type="button" class="settings-back" aria-label="Volver a Ajustes">‹ <span>Ajustes</span></button><div><span class="settings-detail-kicker"></span><h3 class="settings-detail-title"></h3></div>';
+  const detailBody=document.createElement('div');detailBody.className='settings-detail-body';
+  detail.append(detailHead,detailBody);
+
+  const groups=[
+    {id:'day',title:'Tu día',summary:()=>`${formatDuration(Number(els.settingsCapacity?.value||450))} · ${({normal:'Normal',intense:'Intenso',light:'Ligero',rest:'Descanso'})[els.settingsDefaultProfile?.value]||'Normal'}`,nodes:[primary,intelligence]},
+    {id:'appearance',title:'Apariencia',summary:()=>({system:'Sistema',light:'Claro',dark:'Oscuro'})[els.settingsAppearance?.value]||'Sistema',nodes:appearanceNodes},
+    {id:'sync',title:'Sincronización',summary:()=>state.sync?.user?'Firebase · Sincronizado':'Solo este dispositivo',nodes:[sync,calendars]},
+    {id:'privacy',title:'Privacidad y seguridad',summary:()=>state.settings?.privacyMode?'Privacidad activa':'Protección del dispositivo',nodes:[privacyNode,security]},
+    {id:'data',title:'Datos y copias',summary:()=> 'Copias · Papelera · Restauración',nodes:[history,data]},
+    {id:'app',title:'Aplicación',summary:()=> 'Instalación · Diagnóstico',nodes:[install,health]}
+  ];
+
+  // Remove empty legacy wrappers after controls that belong elsewhere have moved.
+  const makeRow=g=>{const b=document.createElement('button');b.type='button';b.className='settings-index-row';b.dataset.settingsTarget=g.id;b.innerHTML=`<span class="settings-index-copy"><strong>${escapeHTML(g.title)}</strong><small></small></span><span class="settings-index-chevron" aria-hidden="true">›</span>`;return b;};
+  groups.forEach(g=>index.appendChild(makeRow(g)));
+  if(actions)form.insertBefore(index,actions); else form.appendChild(index);
+  form.insertBefore(detail,actions||null);
+
+  const refreshSummaries=()=>groups.forEach(g=>{const row=index.querySelector(`[data-settings-target="${g.id}"] small`);if(row)row.textContent=g.summary();});
+  const openGroup=id=>{
+    const g=groups.find(x=>x.id===id);if(!g)return;
+    detailBody.replaceChildren();
+    g.nodes.filter(Boolean).forEach(node=>{node.hidden=false;node.classList.add('settings-detail-section');detailBody.appendChild(node);});
+    detail.querySelector('.settings-detail-kicker').textContent='AJUSTES';
+    detail.querySelector('.settings-detail-title').textContent=g.title;
+    index.hidden=true;detail.hidden=false;form.classList.add('settings-detail-open');
+    detailBody.scrollTop=0;
+  };
+  const closeGroup=()=>{detail.hidden=true;index.hidden=false;form.classList.remove('settings-detail-open');refreshSummaries();form.scrollTop=0;};
+  index.addEventListener('click',e=>{const row=e.target.closest('.settings-index-row');if(row)openGroup(row.dataset.settingsTarget);});
+  detail.querySelector('.settings-back').addEventListener('click',closeGroup);
+  form.addEventListener('change',refreshSummaries);
+  sheet.addEventListener('settings:index',closeGroup);
+  refreshSummaries();
+  window.refreshSettingsIndex=refreshSummaries;
 }
 function auditCapabilities(){
   if(els.taskVoiceBtn&&!('SpeechRecognition'in window)&&!('webkitSpeechRecognition'in window))els.taskVoiceBtn.hidden=true;

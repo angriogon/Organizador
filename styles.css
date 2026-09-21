@@ -1386,7 +1386,7 @@ body.modal-open { position:fixed; width:100%; left:0; right:0; }
 .week-day:active,.week-capacity button:active{transform:scale(.96)}
 
 /* =========================================================
-   v6.0.3 · iOS clarity + tap quarantine + minimal settings
+   v6.0.4 · iOS clarity + tap quarantine + minimal settings
    ========================================================= */
 
 /* iOS standalone: a completely opaque top chrome.  Do not let content, gradients,
@@ -1424,7 +1424,7 @@ body.modal-open { position:fixed; width:100%; left:0; right:0; }
   .task-sheet:has(.advanced-open) .compact-task-form{height:auto!important;max-height:calc(var(--visual-vh,100dvh) - 48px)!important;overflow-y:auto!important}
 }
 
-/* Settings v6.0.3: quiet index + compact detail. No cards inside cards. */
+/* Settings v6.0.4: quiet index + compact detail. No cards inside cards. */
 .settings-sheet{max-width:560px!important}
 .settings-sheet .sheet-body{padding:10px 18px 16px!important}
 .settings-sheet .sheet-handle{display:none!important}
@@ -1463,3 +1463,94 @@ body.modal-open { position:fixed; width:100%; left:0; right:0; }
   .settings-sheet .sheet-body{height:auto!important;max-height:calc(var(--visual-vh,100dvh) - 44px)!important;overflow-y:auto!important;padding:10px 14px 14px!important}
 }
 :root[data-appearance="dark"] .settings-sheet .toggle-row{background:#20262c!important}
+
+/* =========================================================
+   v6.0.4 · pre-integration stability pass
+   ========================================================= */
+/* Restore the iOS top toolbar. The former fixed paint shield could cover the
+   toolbar visually while still allowing its buttons to receive taps. */
+@media (display-mode:standalone) and (max-width:760px){
+  body::before{display:none!important;content:none!important}
+  body.home-route .app-shell{padding-top:max(9px,env(safe-area-inset-top,0px))!important}
+  body.home-route .topbar,.topbar{display:flex!important;visibility:visible!important;opacity:1!important;position:relative!important;z-index:40!important;contain:none!important;isolation:auto!important;overflow:visible!important;background:var(--bg)!important}
+  .topbar-copy,.top-actions{display:flex!important;visibility:visible!important;opacity:1!important;position:relative!important;z-index:41!important}
+  .topbar-copy{flex-direction:column!important}
+  .top-actions{flex-direction:row!important}
+  .topbar h1,.top-actions .icon-btn{visibility:visible!important;opacity:1!important}
+}
+
+/* During close, the full modal remains the hit-test shield. */
+.modal-layer.is-closing,.now-mode.is-closing{pointer-events:auto!important}
+.modal-layer.is-closing{background:transparent!important}
+.modal-layer.is-closing .modal-backdrop{position:absolute!important;inset:0!important;pointer-events:auto!important}
+
+/* Undo is feedback, not a panel: content-sized and screen-safe on every route. */
+.undo-bar{left:50%!important;right:auto!important;width:max-content!important;min-width:0!important;max-width:min(360px,calc(100vw - 32px))!important;min-height:48px!important;padding:6px 7px 6px 14px!important;border-radius:16px!important;transform:translate(-50%,10px)!important;gap:14px!important;white-space:nowrap!important}
+.undo-bar.show{transform:translate(-50%,0)!important}
+.undo-bar #undoText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.undo-bar button{height:36px!important;padding-inline:12px!important}
+@media(max-width:760px){.undo-bar{bottom:calc(158px + env(safe-area-inset-bottom,0px))!important}}
+
+/* Day profile is a small decision card, not a full-height sheet. */
+.modal-layer:has(.profile-day-dialog){align-items:center!important;justify-content:center!important;padding:max(16px,env(safe-area-inset-top,0px)) 16px max(16px,env(safe-area-inset-bottom,0px))!important}
+.modal-layer .profile-day-dialog{width:min(430px,calc(100vw - 32px))!important;height:auto!important;min-height:0!important;max-height:none!important;margin:0!important;border-radius:24px!important;display:block!important}
+.profile-day-dialog .sheet-body{height:auto!important;max-height:none!important;overflow:visible!important;padding:16px!important}
+.profile-day-dialog .sheet-handle{margin-top:0!important}
+.profile-day-dialog .sheet-header{margin-bottom:14px!important}
+.profile-day-dialog .profile-grid{gap:8px!important}
+.profile-day-dialog .profile-grid button{min-height:76px!important;padding:12px!important;border-radius:15px!important}
+@media(max-width:430px){.profile-day-dialog .profile-grid{grid-template-columns:1fr 1fr!important}.profile-day-dialog .profile-grid button{min-height:70px!important}}
+
+/* =========================================================
+   v6.0.5 · Settings proposal A — native, minimal hierarchy
+   ========================================================= */
+.settings-sheet{max-width:520px!important}
+.settings-sheet .settings-organized{padding:14px 16px 16px!important}
+.settings-sheet .sheet-header{min-height:48px!important;margin:0 0 10px!important;padding:0!important;border:0!important}
+.settings-sheet .sheet-header h2{font-size:20px!important;letter-spacing:-.02em!important}
+.settings-sheet .sheet-header>div>.section-kicker,.settings-sheet .settings-intro{display:none!important}
+.settings-index{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:2px}
+.settings-index-row{width:100%;min-height:62px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 4px;text-align:left;cursor:pointer}
+.settings-index-row:last-child{border-bottom:0}
+.settings-index-copy{min-width:0;display:flex;flex-direction:column;gap:3px}
+.settings-index-copy strong{font-size:14px;line-height:1.2;font-weight:760;letter-spacing:-.01em}
+.settings-index-copy small{font-size:10.5px;line-height:1.25;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.settings-index-chevron{font-size:23px;line-height:1;color:var(--muted);font-weight:300;padding-right:3px}
+.settings-detail[hidden],.settings-index[hidden]{display:none!important}
+.settings-detail-head{display:flex;align-items:center;gap:10px;min-height:48px;border-bottom:1px solid var(--line);margin-bottom:10px;padding-bottom:8px}
+.settings-back{border:0;background:transparent;color:var(--ink);display:flex;align-items:center;gap:3px;padding:5px 5px 5px 0;font-size:24px;line-height:1;cursor:pointer}
+.settings-back span{font-size:11px;font-weight:700}
+.settings-detail-head>div{min-width:0}
+.settings-detail-kicker{display:block;font-size:7px;font-weight:800;letter-spacing:.16em;color:var(--muted);margin-bottom:2px}
+.settings-detail-title{font-size:17px!important;line-height:1.15!important;margin:0!important}
+.settings-detail-body{display:flex;flex-direction:column;gap:0}
+.settings-detail-section{border:0!important;border-bottom:1px solid var(--line)!important;background:transparent!important;border-radius:0!important;margin:0!important;padding:10px 0!important;box-shadow:none!important}
+.settings-detail-section:last-child{border-bottom:0!important}
+.settings-detail-section>.section-kicker,.settings-detail-section>h3{display:none!important}
+.settings-detail-section .form-grid{gap:8px!important}
+.settings-detail-section .field{margin:0 0 8px!important}
+.settings-detail-section .field>span{font-size:9.5px!important}
+.settings-detail-section .field input,.settings-detail-section .field select{height:40px!important;min-height:40px!important;border-radius:10px!important;background:var(--surface-soft)!important}
+.settings-detail-section .toggle-row{min-height:48px!important;margin:0!important;padding:8px 4px!important;border-radius:0!important;background:transparent!important;border-bottom:1px solid var(--line)!important}
+.settings-detail-section .toggle-row:last-child{border-bottom:0!important}
+.settings-detail-section .toggle-row strong{font-size:11px!important}
+.settings-detail-section .toggle-row span{font-size:9px!important}
+.settings-detail-section .connect-grid{gap:0!important}
+.settings-detail-section .connect-btn{min-height:48px!important;margin:0!important;padding:8px 4px!important;border-radius:0!important;background:transparent!important;border:0!important;border-bottom:1px solid var(--line)!important;box-shadow:none!important;text-align:left!important}
+.settings-detail-section .connect-btn:last-child{border-bottom:0!important}
+.settings-detail-section .connect-btn strong{font-size:11px!important}.settings-detail-section .connect-btn span{font-size:9px!important}
+.settings-detail-section .sync-card{border:0!important;padding:0!important;background:transparent!important;box-shadow:none!important}
+.settings-detail-section .micro-note{font-size:8.5px!important;line-height:1.35!important;margin:8px 0 0!important}
+.settings-detail-section .health-row{padding:7px 4px!important;margin:0!important;min-height:40px!important;border-bottom:1px solid var(--line)!important}
+.settings-sheet .sheet-actions{margin-top:12px!important;padding:0!important;position:static!important;background:transparent!important}
+.settings-sheet .sheet-actions .ghost-btn{display:none!important}
+.settings-sheet .sheet-actions .primary-btn{width:100%!important;min-height:42px!important;border-radius:11px!important}
+.settings-detail-open .sheet-actions .primary-btn{display:block!important}
+@media(max-width:760px){
+ .modal-layer:has(.settings-sheet){align-items:center!important;padding:12px!important}
+ .modal-layer .settings-sheet{width:min(92vw,500px)!important;height:auto!important;max-height:calc(var(--visual-vh,100dvh) - 28px)!important;border-radius:22px!important}
+ .settings-sheet .settings-organized{height:auto!important;max-height:calc(var(--visual-vh,100dvh) - 48px)!important;overflow-y:auto!important;padding:12px 14px 14px!important}
+ .settings-index-row{min-height:58px!important}
+}
+:root[data-appearance="dark"] .settings-detail-section .field input,:root[data-appearance="dark"] .settings-detail-section .field select{background:#20262c!important}
+.settings-organized:not(.settings-detail-open)>.sheet-actions{display:none!important}

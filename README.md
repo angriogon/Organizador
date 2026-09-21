@@ -149,3 +149,12 @@ La modularización es deliberadamente progresiva: no se ha reescrito sincronizac
 - Aprendizaje de capacidad con días históricos limpios; los días anómalos no contaminan las predicciones.
 - Inicio disponible durante Work Focus, tareas de escritorio más compactas, Undo/toasts reajustados y Ajustes en acordeón.
 - Protección reforzada frente a click-through al cerrar hojas en iOS.
+
+
+## 6.0.2 · Visual calm
+- Ajustes convertidos en índice compacto.
+- Cabecera PWA iOS opaca y nítida.
+- Calendario táctil reforzado.
+- Captura rápida centrada y compacta hasta abrir Más opciones.
+- Filas de tareas más densas en iOS y Windows.
+- Pulsar Inicio cuando ya está activo no fuerza un render visible.

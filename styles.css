@@ -1316,3 +1316,71 @@ body.modal-open { position:fixed; width:100%; left:0; right:0; }
 .action-sheet .sheet-body{height:auto!important;max-height:calc(var(--visual-vh,100dvh) - 40px)!important;overscroll-behavior:none}
 @media (display-mode:standalone) and (max-width:760px){body.modal-open{position:static!important;width:auto!important;left:auto!important;right:auto!important;top:auto!important}}
 \n\n/* =========================================================\n   v6.0.1 · ADE Adaptation + daily-use polish\n   ========================================================= */\n/* Work Focus keeps Inicio available: execution can start from the adaptive day. */\nbody.work-focus-mode .side-nav .nav-item[data-route]:not([data-route="work"]):not([data-route="home"]),\nbody.work-focus-mode .side-nav .planning-nav,body.work-focus-mode .nav-settings,body.work-focus-mode .top-actions{display:none!important}\nbody.work-focus-mode .side-nav .nav-item[data-route="home"],body.work-focus-mode .side-nav .nav-item[data-route="work"]{display:flex!important}\n\n/* Compact task rows: same information, less visual noise, especially on Windows. */\n@media(min-width:761px){\n  .task-item{border-radius:13px!important;margin-bottom:6px!important}\n  .task-item .swipe-content{min-height:52px!important;padding:4px 8px!important;grid-template-columns:38px minmax(0,1fr) auto!important;gap:4px!important}\n  .task-check{width:38px!important;height:38px!important;min-width:38px!important;min-height:38px!important}\n  .task-title{font-size:12px!important;line-height:1.2!important}\n  .task-duration{font-size:10px!important}.row-more{width:32px!important;height:32px!important}\n  .exception-row{gap:4px!important;margin-top:2px!important}.exception-badge{font-size:8.5px!important;padding:2px 5px!important}\n}\n\n/* Undo is a compact floating pill, never a large panel. */\n.undo-bar{box-sizing:border-box!important;min-height:50px!important;height:auto!important;padding:7px 8px 7px 14px!important;border-radius:16px!important;line-height:1.2!important}\n.undo-bar button{flex:0 0 auto!important;height:36px!important}\n@media(max-width:760px){\n  .undo-bar{left:50%!important;right:auto!important;width:calc(100vw - 36px)!important;max-width:430px!important;bottom:calc(154px + env(safe-area-inset-bottom,0px))!important;transform:translate(-50%,10px)!important;padding:7px 8px 7px 14px!important}\n  .undo-bar.show{transform:translate(-50%,0)!important}\n  .toast{width:auto!important;min-width:0!important;max-width:calc(100vw - 48px)!important;padding:9px 12px!important;border-radius:14px!important}\n}\n\n/* Settings: one calm accordion instead of a wall of controls. */\n.settings-organized{display:block!important;max-width:760px;margin-inline:auto}\n.settings-sheet .settings-collapsible{padding:0!important;margin:8px 0!important;overflow:hidden;border-radius:15px!important}\n.settings-collapse-head{width:100%;min-height:52px;border:0;background:transparent;color:inherit;display:flex;align-items:center;gap:8px;padding:10px 13px;text-align:left;font:inherit;cursor:pointer}\n.settings-collapse-head>span:nth-last-child(2){font-size:12px;font-weight:800;flex:1}.settings-collapse-head>span:last-child{font-size:16px;color:var(--muted);transition:transform .15s ease}\n.settings-collapse-head .section-kicker{margin:0!important;min-width:78px;font-size:8px!important}\n.settings-collapsible:not(.is-open)>:not(.settings-collapse-head){display:none!important}\n.settings-collapsible.is-open>.settings-collapse-head>span:last-child{transform:rotate(180deg)}\n.settings-collapsible.is-open{padding-bottom:12px!important}.settings-collapsible.is-open>:not(.settings-collapse-head){margin-left:13px!important;margin-right:13px!important}\n.settings-sheet .sheet-actions{position:sticky;bottom:0;z-index:8;background:var(--surface-solid);padding-top:10px!important}\n:root[data-appearance="dark"] .settings-sheet .sheet-actions{background:#171b1f}\n
+
+/* =========================================================
+   v6.0.2 · visual calm + compact capture/calendar polish
+   ========================================================= */
+/* iOS standalone header: opaque, crisp and visually integrated with the safe area. */
+@media (display-mode:standalone) and (max-width:760px){
+  body{background:var(--bg)!important}
+  .topbar{position:relative;z-index:12;background:var(--bg)!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+  .topbar::before{content:"";position:absolute;z-index:-1;left:-16px;right:-16px;top:calc(-1 * env(safe-area-inset-top));height:calc(100% + env(safe-area-inset-top));background:var(--bg);pointer-events:none}
+  .top-actions,.topbar-copy{filter:none!important;opacity:1!important}
+  .top-actions .icon-btn{background:var(--surface-solid)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:0 2px 10px rgba(35,45,55,.04)!important}
+}
+
+/* Settings is a compact index first. Content opens without geometry tricks. */
+.settings-sheet .settings-collapsible{background:transparent!important;border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;margin:0!important;overflow:visible!important}
+.settings-sheet .settings-collapsible:first-of-type{border-top:1px solid var(--line)!important}
+.settings-collapse-head{min-height:54px!important;padding:9px 2px!important;gap:10px!important}
+.settings-collapse-head .section-kicker{min-width:0!important;width:86px!important;font-size:7.5px!important;letter-spacing:.13em!important;color:var(--muted)!important}
+.settings-collapse-head>span:nth-last-child(2){font-size:12.5px!important;font-weight:760!important}
+.settings-collapse-head>span:last-child{font-size:14px!important}
+.settings-collapsible.is-open{padding:0 0 13px!important;background:transparent!important}
+.settings-collapsible.is-open>:not(.settings-collapse-head){margin-left:0!important;margin-right:0!important}
+.settings-sheet .toggle-row{min-height:54px!important;padding:9px 10px!important;border-radius:12px!important;margin:6px 0!important}
+.settings-sheet .field{gap:5px!important}.settings-sheet .field input,.settings-sheet .field select{min-height:42px!important}
+.settings-sheet .connect-grid{gap:6px!important}.settings-sheet .connect-btn{min-height:48px!important;border-radius:12px!important}
+.settings-sheet .settings-intro{margin-bottom:8px!important}
+@media(max-width:760px){.settings-sheet .sheet-body{padding-left:18px!important;padding-right:18px!important}.settings-sheet .sheet-header{margin-bottom:8px!important}}
+
+/* Quick capture is truly quick: a centered compact card until advanced options are requested. */
+@media(max-width:760px){
+  .modal-layer:has(.task-sheet){align-items:center!important;padding:16px!important}
+  .modal-layer .task-sheet{width:min(94vw,430px)!important;max-height:min(520px,calc(var(--visual-vh,100dvh) - 36px))!important;margin:0!important;border-radius:24px!important}
+  .modal-layer .task-sheet .compact-task-form{max-height:inherit!important;overflow:auto!important;padding:12px 14px 14px!important}
+  .task-sheet:not(:has(.advanced-open)) .sheet-handle{display:none!important}
+  .task-sheet:has(.advanced-open){max-height:calc(var(--visual-vh,100dvh) - 24px)!important}
+  .compact-task-header{position:static!important;padding-top:0!important;background:transparent!important}
+  .compact-task-header h2{font-size:18px!important}
+  .quick-task-line input{height:43px!important}
+  .quick-meta-row{margin-top:7px!important}.mini-select,.mini-chip{height:42px!important}
+  .compact-save-row{position:static!important;background:transparent!important;padding-top:5px!important}
+}
+
+/* Task list as small annotations: dense but still 44px touch-safe. */
+.task-item{box-shadow:none!important}
+.task-item .swipe-content{align-items:center!important}
+.task-main{align-self:center!important}
+.task-title-line{align-items:center!important}
+.task-title{margin:0!important;line-height:1.18!important}
+.task-duration{align-self:center!important;white-space:nowrap!important}
+@media(max-width:760px){
+  .task-item{border-radius:12px!important;margin-bottom:5px!important}
+  .task-item .swipe-content{min-height:48px!important;padding:2px 7px!important;grid-template-columns:40px minmax(0,1fr) auto!important;gap:3px!important}
+  .task-check{width:40px!important;height:44px!important;min-width:40px!important;min-height:44px!important}
+  .task-check::before{width:17px!important;height:17px!important;border-radius:5px!important}
+  .task-title{font-size:12.5px!important;font-weight:720!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .task-duration{font-size:9.5px!important;color:var(--muted)!important}
+  .row-more{width:34px!important;height:44px!important;min-width:34px!important;min-height:44px!important;margin:0!important}
+  .exception-row{margin-top:1px!important;gap:3px!important;min-height:0!important}.exception-badge{font-size:8px!important;padding:1px 4px!important;border-radius:4px!important}
+}
+@media(min-width:761px){
+  .task-item .swipe-content{min-height:46px!important;padding:2px 7px!important;grid-template-columns:36px minmax(0,1fr) auto!important}
+  .task-check{width:36px!important;height:40px!important;min-width:36px!important;min-height:40px!important}
+  .task-title{font-size:11.5px!important}.row-more{min-width:30px!important;min-height:36px!important}
+}
+
+/* Calendar day selectors are visibly interactive on touch devices. */
+.week-day,.week-capacity button,.day-number{touch-action:manipulation;cursor:pointer;position:relative;z-index:2}
+.week-day:active,.week-capacity button:active{transform:scale(.96)}

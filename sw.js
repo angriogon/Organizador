@@ -1,13 +1,13 @@
-const CACHE_NAME = 'opi-v6.0.1-shell-1';
+const CACHE_NAME = 'opi-v6.0.2-shell-1';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=6.0.1',
-  './core.js?v=6.0.1',
-  './platform.js?v=6.0.1',
-  './app.js?v=6.0.1',
-  './config.js?v=6.0.1',
-  './manifest.webmanifest?v=6.0.1',
+  './styles.css?v=6.0.2',
+  './core.js?v=6.0.2',
+  './platform.js?v=6.0.2',
+  './app.js?v=6.0.2',
+  './config.js?v=6.0.2',
+  './manifest.webmanifest?v=6.0.2',
   './browserconfig.xml',
   './favicon-v313.ico',
   './favicon.ico',

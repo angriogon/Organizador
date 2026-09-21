@@ -22,3 +22,6 @@ Extraer por etapas `tasks/`, `sync/`, `ui/overlays`, `ui/gestures` y `planning/`
 
 ## Adaptive Day Engine · 6.0
 6.0 consolidates the first unified deterministic ADE core: `getDayState()`, dynamic remaining capacity, robust median-based duration prediction, temporal priority, decomposed risk, confidence and formal task states. Existing screens progressively consume this shared core; no remote AI is required.
+
+## ADE Adaptation (6.0.1)
+Las señales de cansancio, capacidad reducida, ausencia y cierre alimentan el DayState. Las replanificaciones automáticas no incrementan el contador de aplazamientos. El aprendizaje histórico ignora días marcados como anómalos y la carga realizada se contabiliza por fecha real de ejecución.

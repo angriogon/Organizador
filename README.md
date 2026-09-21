@@ -140,3 +140,12 @@ La modularización es deliberadamente progresiva: no se ha reescrito sincronizac
 - Inclusive labels: “Estoy cansado/a” and “Hoy voy justo/a”.
 - Completion control redesigned with a compact rounded-square mark and independent 44px hit target.
 - Full reset strengthened: clears tasks, history, learning, UI memory, drafts, local app diagnostics and synced task data while preserving the login account.
+
+
+## 6.0.1 · ADE Adaptation
+- Señales diarias persistentes para cansancio, día ajustado, ausencia y cierre del día.
+- Replanificación del sistema separada de los aplazamientos voluntarios.
+- La carga ejecutada se atribuye al día real de ejecución, aunque la tarea estuviera prevista para otro día.
+- Aprendizaje de capacidad con días históricos limpios; los días anómalos no contaminan las predicciones.
+- Inicio disponible durante Work Focus, tareas de escritorio más compactas, Undo/toasts reajustados y Ajustes en acordeón.
+- Protección reforzada frente a click-through al cerrar hojas en iOS.

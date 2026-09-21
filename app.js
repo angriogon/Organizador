@@ -148,6 +148,7 @@ function normalizeTask(task) {
     actualDuration: (task.actualDuration === null || task.actualDuration === '' || task.actualDuration === undefined || !Number.isFinite(Number(task.actualDuration))) ? null : Math.max(0, Math.round(Number(task.actualDuration))),
     modifiedAt: task.modifiedAt || task.createdAt || new Date().toISOString(),
     lastDecisionReason: task.lastDecisionReason || '',
+    adaptationType: task.adaptationType || '',
     lastDeviceId: task.lastDeviceId || task.deviceId || '',
     deletedAt: task.deletedAt || null,
     project: String(task.project || '').trim(),
@@ -198,7 +199,7 @@ function isWorkFocusActive(at=new Date()){
 function enforceWorkFocus(){
   const active=isWorkFocusActive();
   document.body.classList.toggle('work-focus-mode',active);
-  if(active&&state.route!=='work')state.route='work';
+  if(active&&!['home','work'].includes(state.route))state.route='work';
   if(!active&&state.workFocusWasActive&&state.route==='work')state.route='home';
   state.workFocusWasActive=active;
 }
@@ -227,17 +228,41 @@ function adeMedian(values){
   const m=Math.floor(xs.length/2);return xs.length%2?xs[m]:(xs[m-1]+xs[m])/2;
 }
 function adeConfidence(sampleCount){return sampleCount>=10?'high':sampleCount>=4?'medium':'low';}
+function getDaySignals(date=todayISO()){
+  const saved=(state.ui.daySignals||{})[date]||{};
+  return {lowEnergy:Boolean(saved.lowEnergy||state.ui.lowEnergyDate===date),tight:Boolean(saved.tight||state.ui.tightDayDate===date),closed:Boolean(saved.closed||state.ui.dayClosedDate===date),absence:Boolean(saved.absence)};
+}
+function setDaySignal(date,key,value=true){
+  state.ui.daySignals=state.ui.daySignals||{};const row={...(state.ui.daySignals[date]||{})};row[key]=Boolean(value);row.updatedAt=new Date().toISOString();state.ui.daySignals[date]=row;
+  const keys=Object.keys(state.ui.daySignals).sort();while(keys.length>45){delete state.ui.daySignals[keys.shift()];}
+  saveUI();
+}
+function isAnomalousDay(date=todayISO()){const s=getDaySignals(date);return s.lowEnergy||s.tight||s.absence;}
+function getHistoricalCapacityFactor(){
+  const rows=(state.learning.weeklySnapshots||[]).filter(x=>x.kind==='day-outcome'&&!x.anomalous&&Number(x.plannedMinutes)>0&&Number(x.completedMinutes)>=0).slice(-21);
+  if(rows.length<4)return 1;const ratios=rows.map(x=>Math.max(.45,Math.min(1.15,Number(x.completedMinutes)/Number(x.plannedMinutes))));
+  return Math.max(.78,Math.min(1.05,adeMedian(ratios)??1));
+}
+function recordAdaptationEvent(type,meta={}){state.learning.adaptationEvents=[...(state.learning.adaptationEvents||[]),{type,date:todayISO(),at:new Date().toISOString(),...meta}].slice(-120);saveLearning();}
+function recordDayOutcomeSnapshot(date=todayISO()){
+  const pending=tasksOn(date),done=state.tasks.filter(t=>t.completedAt&&toISO(new Date(t.completedAt))===date&&!t.deletedAt);
+  const completedMinutes=done.reduce((s,t)=>s+Number(t.actualDuration||predictedDuration(t)||0),0),plannedMinutes=completedMinutes+pending.reduce((s,t)=>s+predictedDuration(t),0);
+  const row={kind:'day-outcome',date,plannedMinutes,completedMinutes,anomalous:isAnomalousDay(date),signals:getDaySignals(date)};
+  const list=(state.learning.weeklySnapshots||[]).filter(x=>!(x.kind==='day-outcome'&&x.date===date));list.push(row);state.learning.weeklySnapshots=list.slice(-42);saveLearning();
+}
 function getDayCapacity(date) {
   let base=Math.max(60, Number(state.settings.dailyCapacity||450)-getBusyMinutes(date));
   base*=profileMultiplier(date);
-  if(state.ui.tightDayDate===date)base*=.65;
+  if(state.settings.intelligentMode)base*=getHistoricalCapacityFactor();
+  if(getDaySignals(date).lowEnergy)base*=.82;
+  if(state.ui.tightDayDate===date||getDaySignals(date).tight)base*=.65;
   if(state.settings.weekendMode&&isWeekendDate(date))base*=.88;
   const buffer=Math.max(0,Math.min(35,Number(state.settings.bufferPercent||0)))/100;
   if(state.settings.intelligentMode)base*=1-buffer;
   return Math.max(45,Math.round(base));
 }
 function getDurationRatio(category){
-  const samples=(state.learning.durationSamples||[]).filter(s=>s.category===category&&Number(s.estimated)>0&&Number(s.actual)>0).slice(-24);
+  const samples=(state.learning.durationSamples||[]).filter(s=>s.category===category&&Number(s.estimated)>0&&Number(s.actual)>0&&!s.anomalous).slice(-24);
   if(samples.length<3)return 1;
   const ratios=samples.map(s=>Math.max(.5,Math.min(2.2,Number(s.actual)/Number(s.estimated))));
   const median=adeMedian(ratios)??1;
@@ -245,7 +270,7 @@ function getDurationRatio(category){
 }
 function getDurationPrediction(task){
   const declared=task?.duration;
-  const samples=(state.learning.durationSamples||[]).filter(x=>x.category===task?.category&&Number(x.actual)>0).slice(-24);
+  const samples=(state.learning.durationSamples||[]).filter(x=>x.category===task?.category&&Number(x.actual)>0&&!x.anomalous).slice(-24);
   if(declared!==null&&declared!==''&&declared!==undefined&&Number.isFinite(Number(declared))){
     const relevant=samples.filter(x=>Number(x.estimated)>0);
     return {minutes:Math.max(5,Math.round(Number(declared)*getDurationRatio(task.category))),confidence:adeConfidence(relevant.length),samples:relevant.length,source:relevant.length>=3?'learned-ratio':'declared'};
@@ -276,10 +301,12 @@ function getDynamicCapacity(date){
 }
 function getDayLoad(date, extraMinutes=0, excludeTaskId=null) {
   const dayTasks=tasksOn(date).filter(t=>t.id!==excludeTaskId);
-  const planned=dayTasks.reduce((sum,t)=>sum+Number(t.duration||0),0)+extraMinutes;
-  const mental=dayTasks.reduce((sum,t)=>sum+effectiveTaskLoadMinutes(t),0)+extraMinutes;
+  const executed=state.tasks.filter(t=>t.id!==excludeTaskId&&!t.deletedAt&&t.completedAt&&toISO(new Date(t.completedAt))===date);
+  const executedMinutes=executed.reduce((sum,t)=>sum+Number(t.actualDuration||predictedDuration(t)||0),0);
+  const planned=dayTasks.reduce((sum,t)=>sum+Number(t.duration||0),0)+executedMinutes+extraMinutes;
+  const mental=dayTasks.reduce((sum,t)=>sum+effectiveTaskLoadMinutes(t),0)+executedMinutes+extraMinutes;
   const capacity=getDayCapacity(date);
-  return { planned, mental, capacity, percent: Math.round((mental/Math.max(1,capacity))*100), busy:getBusyMinutes(date) };
+  return { planned, mental, capacity, percent: Math.round((mental/Math.max(1,capacity))*100), busy:getBusyMinutes(date), executedMinutes };
 }
 function loadStatus(percent) {
   if (percent <= 35) return {label:'Día ligero',short:'Ligero',emoji:'😌',level:'light'};
@@ -305,7 +332,7 @@ function getTemporalPriority(task,atDate=todayISO()){
   const success=(state.learning.completionHours||{})[task.category];if(Array.isArray(success)&&success.length>=3){const avg=success.slice(-12).reduce((a,b)=>a+b,0)/Math.min(12,success.length);if(Math.abs(hour-avg)<=2){parts.context+=8;score+=8;}}
   if(state.settings.weekendMode&&isWeekendDate(today)){if(task.category==='personal')score+=14;if(task.category==='work')score-=12;}
   if(state.settings.workFreeWeekend&&isWeekendDate(today)&&task.category==='work'&&!task.deadline)score-=55;
-  if(state.lowEnergyMode){if(task.energy==='low')score+=24;else if(task.energy==='high')score-=22;}
+  if(state.lowEnergyMode||getDaySignals(today).lowEnergy){if(task.energy==='low')score+=24;else if(task.energy==='high')score-=22;}
   if(task.lastDecisionReason==='energy'&&hour>=19)score-=10;const preferred=contextFromTask(task);if(preferred==='focus'&&hour>=8&&hour<=12)score+=5;
   return {score,parts};
 }
@@ -319,7 +346,7 @@ function getTaskRiskBreakdown(task,date=todayISO()){
   return {deadlineRisk,capacityRisk,postponementRisk,dependencyRisk,energyRisk,score,level};
 }
 function getDayState(date=todayISO()){
-  const tasks=tasksOn(date).filter(t=>!t.deletedAt&&!t.archivedAt),remaining=tasks.filter(t=>!t.completedAt),completed=tasks.filter(t=>t.completedAt),blocked=remaining.filter(isTaskBlocked),overdue=remaining.filter(isOverdueDeadline);
+  const tasks=tasksOn(date).filter(t=>!t.deletedAt&&!t.archivedAt),remaining=tasks.filter(t=>!t.completedAt),completed=state.tasks.filter(t=>!t.deletedAt&&t.completedAt&&toISO(new Date(t.completedAt))===date),blocked=remaining.filter(isTaskBlocked),overdue=remaining.filter(isOverdueDeadline);
   const load=getDayLoad(date),dynamic=getDynamicCapacity(date),remainingLoad=remaining.reduce((s,t)=>s+effectiveTaskLoadMinutes(t),0),remainingPercent=Math.round(remainingLoad/Math.max(1,dynamic.remaining)*100);
   const risks=remaining.map(t=>getTaskRiskBreakdown(t,date));const overallRisk=risks.length?Math.max(...risks.map(r=>r.score)):0;
   const candidates=remaining.filter(t=>!t.inbox&&!isTaskBlocked(t)).slice().sort((a,b)=>getTemporalPriority(b,date).score-getTemporalPriority(a,date).score||String(a.id).localeCompare(String(b.id)));
@@ -532,12 +559,12 @@ function getPlanningWeekStart(){return getPlanningWeekStartFrom(state.ui.plannin
 
 function getWeekDates(start=getPlanningWeekStart()){return Array.from({length:7},(_,i)=>addDays(start,i));}
 function getPlanningDayTasks(date){
-  const all=state.tasks.filter(t=>!t.archivedAt&&!t.deletedAt&&t.scheduledDate===date);
-  return date<todayISO()?all:all.filter(t=>!t.completedAt);
+  if(date<todayISO())return state.tasks.filter(t=>!t.archivedAt&&!t.deletedAt&&((t.completedAt&&toISO(new Date(t.completedAt))===date)||(!t.completedAt&&t.scheduledDate===date)));
+  return state.tasks.filter(t=>!t.archivedAt&&!t.deletedAt&&!t.completedAt&&t.scheduledDate===date);
 }
 function getPlanningDayLoad(date){
   if(date>=todayISO())return getDayLoad(date);
-  const planned=getPlanningDayTasks(date).reduce((sum,t)=>sum+(t.actualDuration??predictedDuration(t)),0);
+  const tasks=getPlanningDayTasks(date),planned=tasks.reduce((sum,t)=>sum+(t.completedAt?(t.actualDuration??predictedDuration(t)):predictedDuration(t)),0);
   const capacity=getDayCapacity(date);
   return {planned,mental:planned,capacity,percent:Math.round((planned/Math.max(1,capacity))*100)};
 }
@@ -1090,7 +1117,7 @@ function renderHome() {
   els.topThreeList.innerHTML=pendingFocus.length?pendingFocus.map((task,index)=>renderFocusItem(task,index)).join(''):(focus.length?'<div class="focus-empty focus-done-all">Tus 3 importantes están hechas ✓</div>':'<div class="focus-empty">Nada imprescindible ahora mismo.</div>');
   els.focusProgress.innerHTML=[0,1,2].map(i=>`<span class="progress-dot ${focus[i]?.completedAt?'done':''}"></span>`).join('');
   const next=getNextBestAction();els.startNextBtn.disabled=!next;els.startNextBtn.querySelector('span').textContent=state.ui.activeNowTaskId?'Continuar':'Empezar';
-  els.lowEnergyBtn.classList.toggle('active',state.lowEnergyMode);
+  state.lowEnergyMode=getDaySignals(today).lowEnergy;els.lowEnergyBtn.classList.toggle('active',state.lowEnergyMode);
   const recommendation=getRecommendation();els.smartRecommendation.hidden=!recommendation;if(recommendation){els.smartRecommendation.className=`smart-recommendation ${recommendation.className||''}`;els.smartRecommendation.dataset.recommendation=recommendation.type;els.smartRecommendation.title=recommendation.reason||'';els.smartRecommendation.setAttribute('aria-label',`${recommendation.text}. ${recommendation.reason||''}`);els.smartRecommendation.innerHTML=`<span>${escapeHTML(recommendation.text)}${recommendation.reason?`<small class="recommendation-reason">${escapeHTML(recommendation.reason)}</small>`:''}</span><strong>${escapeHTML(recommendation.action)} →</strong>`;}
   els.miniAgendaText.textContent=getMiniAgendaText();renderGapChips();els.gestureHint.hidden=state.ui.gestureUses>=3 || !focus.some(t=>!t.completedAt);
   applyHomeCompactness();
@@ -1279,7 +1306,7 @@ function openSheet(el) {
 }
 function closeSheet(el,{restoreFocus=true}={}) {
   if (!el || !el.classList.contains('is-open') || state.overlay.phase==='closing') return;
-  state.overlay.phase='closing';el.classList.add('is-closing');el.inert=true;
+  state.overlay.phase='closing';state.blockClickThroughUntil=performance.now()+520;el.classList.add('is-closing');el.inert=true;
   const finalize=()=>{el.classList.remove('is-open','is-closing');el.hidden=true;el.setAttribute('aria-hidden','true');releaseSuppressedClicks();cancelActiveGesture();state.overlay.active=null;state.overlay.phase='closed';syncModalLock();if(restoreFocus&&state.overlay.opener?.isConnected)state.overlay.opener.focus?.({preventScroll:true});state.overlay.opener=null;};
   if(reduceMotion())finalize();else setTimeout(finalize,170);
 }
@@ -1340,7 +1367,7 @@ function actionOption({icon,title,sub='',end='',attrs='',className=''}){return `
 function showActionSheet(html){els.actionSheetContent.innerHTML=html;openSheet(els.actionSheet);}
 
 function openWhatsNew(){
-  showActionSheet(`${sheetHeader('Novedades','Organizador 6.0')}
+  showActionSheet(`${sheetHeader('Novedades','Organizador 6.0.1')}
     <div class="release-hero">
       <span class="release-badge">FOUNDATION & RELIABILITY</span>
       <strong>Una base más limpia para lo que viene.</strong>
@@ -1501,7 +1528,7 @@ function openActualDurationPrompt(id){
   const task=state.tasks.find(t=>t.id===id);if(!task)return;const last=Math.max(1,Math.round(Number(state.learning.lastActualDuration||0)));const presets=[5,10,15,30,45,60];if(last&&!presets.includes(last))presets.unshift(last);
   showActionSheet(`${sheetHeader('Tiempo real','¿Cuánto te llevó?')}<p class="action-summary">${escapeHTML(task.title)}</p><div class="duration-presets">${presets.slice(0,7).map(m=>`<button type="button" data-actual-duration="${m}" data-id="${id}">${formatMinutes(m)}</button>`).join('')}</div><label class="field"><span>Otro tiempo (minutos)</span><input id="actualDurationCustom" type="number" inputmode="numeric" min="1" max="720" placeholder="Ej. 25"></label><div class="sheet-actions"><button type="button" class="ghost-btn" data-complete-without-duration="${id}">Omitir</button><button type="button" class="primary-btn" data-actual-duration-custom="${id}">Guardar y completar</button></div>`);
 }
-function recordDurationSample(task,actual){if(!Number.isFinite(actual)||actual<=0||actual>720)return;state.learning.durationSamples=(state.learning.durationSamples||[]).slice(-79);state.learning.durationSamples.push({estimated:task.duration==null?null:Number(task.duration),actual,category:task.category,date:todayISO()});state.learning.lastActualDuration=actual;saveLearning();}
+function recordDurationSample(task,actual){if(!Number.isFinite(actual)||actual<=0||actual>720)return;state.learning.durationSamples=(state.learning.durationSamples||[]).slice(-79);state.learning.durationSamples.push({estimated:task.duration==null?null:Number(task.duration),actual,category:task.category,date:todayISO(),anomalous:isAnomalousDay(todayISO())});state.learning.lastActualDuration=actual;saveLearning();}
 function recordCompletionRhythm(task){const hour=new Date().getHours();const map=state.learning.completionHours||{};map[task.category]=(map[task.category]||[]).slice(-19);map[task.category].push(hour);state.learning.completionHours=map;saveLearning();}
 
 function advanceRecurrence(task){
@@ -1514,12 +1541,12 @@ function advanceRecurrence(task){
   let deadline='';if(task.deadline&&task.scheduledDate){const delta=Math.round((parseISODate(task.deadline)-parseISODate(task.scheduledDate))/86400000);deadline=addDays(next,delta);}
   state.tasks.push(createTask({...task,id:uid(),scheduledDate:next,deadline,completedAt:null,archivedAt:null,deletedAt:null,googleEventId:null,snoozeCount:0,postponeAlertedAtCount:0,startedAt:'',actualDuration:null,sessions:[],history:[],subtasks:(task.subtasks||[]).map(s=>({id:uid(),title:s.title,completedAt:null}))}));
 }
-function applySnooze(id,date){const task=state.tasks.find(t=>t.id===id);if(!task)return;const reason=state.pendingSnoozeReason||'time';closeActionSheet();animatedMutation(id,'snoozing',`→ ${weekdayName(date)} · ${formatDate(date)}`,()=>{task.scheduledDate=date;task.snoozeCount+=1;task.lastDecisionReason=reason;task.startedAt='';if(state.ui.activeNowTaskId===id){state.ui.activeNowTaskId='';state.ui.activeNowStartedAt='';}state.learning.decisions=(state.learning.decisions||[]).slice(-79);state.learning.decisions.push({taskId:id,category:task.category,reason,hour:new Date().getHours(),date:todayISO()});saveLearning();});}
+function applySnooze(id,date){const task=state.tasks.find(t=>t.id===id);if(!task)return;const reason=state.pendingSnoozeReason||'time';closeActionSheet();animatedMutation(id,'snoozing',`→ ${weekdayName(date)} · ${formatDate(date)}`,()=>{task.scheduledDate=date;task.snoozeCount+=1;task.lastDecisionReason=reason;task.adaptationType='userPostponed';task.startedAt='';if(state.ui.activeNowTaskId===id){state.ui.activeNowTaskId='';state.ui.activeNowStartedAt='';}state.learning.decisions=(state.learning.decisions||[]).slice(-79);state.learning.decisions.push({taskId:id,category:task.category,reason,hour:new Date().getHours(),date:todayISO()});saveLearning();});}
 function archiveTask(id){const task=state.tasks.find(t=>t.id===id);if(!task)return;closeActionSheet();animatedMutation(id,'archiving','Tarea archivada',()=>{task.archivedAt=new Date().toISOString();});}
 function deleteTask(id){const task=state.tasks.find(t=>t.id===id);if(!task)return;closeActionSheet();animatedMutation(id,'deleting','Tarea a la papelera',()=>{task.deletedAt=new Date().toISOString();appendTaskHistory(task,'deleted');});}
 function confirmSplit(id){const task=state.tasks.find(t=>t.id===id);if(!task)return;const parts=[...els.actionSheetContent.querySelectorAll('.split-part')].map(i=>i.value.trim()).filter(Boolean);if(parts.length<2){toast('Escribe al menos dos pasos.');return;}mutateWithUndo('Tarea dividida',()=>{task.subtasks=parts.slice(0,4).map(title=>({id:uid(),title,completedAt:null}));});closeActionSheet();}
-function confirmMakeSpace(){const moves=[...state.pendingSpaceSuggestions];if(!moves.length)return;mutateWithUndo('Día reorganizado',()=>moves.forEach(m=>{const t=state.tasks.find(x=>x.id===m.id);if(t){t.scheduledDate=m.date;t.snoozeCount+=1;}}));state.pendingSpaceSuggestions=[];closeActionSheet();}
-function applyDayClose(action){const pending=tasksOn(todayISO());mutateWithUndo('Cierre del día aplicado',()=>pending.forEach(task=>{if(task.nonNegotiableDate===todayISO())return;if(action==='tomorrow'){const tomorrow=addDays(todayISO(),1);task.scheduledDate=getDayLoad(tomorrow,effectiveTaskLoadMinutes(task),task.id).percent<=95?tomorrow:findNextGap(task,tomorrow);task.snoozeCount+=1;task.lastDecisionReason='time';}if(action==='gaps'){task.scheduledDate=findNextGap(task);task.snoozeCount+=1;task.lastDecisionReason='time';}if(action==='archive')task.archivedAt=new Date().toISOString();}));closeActionSheet();}
+function confirmMakeSpace(){const moves=[...state.pendingSpaceSuggestions];if(!moves.length)return;mutateWithUndo('Día reorganizado',()=>moves.forEach(m=>{const t=state.tasks.find(x=>x.id===m.id);if(t){t.scheduledDate=m.date;t.adaptationType='systemReplanned';}}));state.pendingSpaceSuggestions=[];closeActionSheet();}
+function applyDayClose(action){recordDayOutcomeSnapshot(todayISO());setDaySignal(todayISO(),'closed',true);state.ui.dayClosedDate=todayISO();recordAdaptationEvent('day-closed',{action});const pending=tasksOn(todayISO());mutateWithUndo('Cierre del día aplicado',()=>pending.forEach(task=>{if(task.nonNegotiableDate===todayISO())return;if(action==='tomorrow'){const tomorrow=addDays(todayISO(),1);task.scheduledDate=getDayLoad(tomorrow,effectiveTaskLoadMinutes(task),task.id).percent<=95?tomorrow:findNextGap(task,tomorrow);task.lastDecisionReason='capacity';task.adaptationType='systemReplanned';}if(action==='gaps'){task.scheduledDate=findNextGap(task);task.lastDecisionReason='capacity';task.adaptationType='systemReplanned';}if(action==='archive')task.archivedAt=new Date().toISOString();}));closeActionSheet();}
 function maybeCelebrateFocus(){const focus=getFocusTasks();if(focus.length===3&&focus.every(t=>t.completedAt)&&state.ui.celebratedDate!==todayISO()){state.ui.celebratedDate=todayISO();saveUI();setTimeout(()=>{els.focusProgress.classList.add('celebrate');buzz(18);toast('Tus 3, hechos ✓');setTimeout(()=>els.focusProgress.classList.remove('celebrate'),650);},190);}}
 
 function contextFromTask(task){
@@ -1534,7 +1561,7 @@ function contextFromTask(task){
 function contextLabelForTask(task){return {admin:'Gestiones',home:'Casa y personal',focus:'Concentración',out:'Fuera'}[contextFromTask(task)]||CATEGORY_SHORT[task.category]||'Tareas';}
 function buildSequence(minutes){const candidates=activeTasks().filter(t=>!t.inbox&&predictedDuration(t)<=minutes).sort((a,b)=>taskScore(b)-taskScore(a));if(!candidates.length)return[];const anchor=contextLabelForTask(candidates[0]);let left=minutes;const seq=[];for(const t of candidates){const d=predictedDuration(t);if(d<=left&&(contextLabelForTask(t)===anchor||seq.length===0)){seq.push(t);left-=d;}if(seq.length>=5)break;}if(seq.length<2){for(const t of candidates){if(seq.includes(t))continue;const d=predictedDuration(t);if(d<=left){seq.push(t);left-=d;}if(seq.length>=4)break;}}return seq;}
 function showQuickTime(minutes){document.body.classList.add('home-results-open');state.quickMode=`time-${minutes}`;const tasks=activeTasks().filter(t=>!t.inbox&&predictedDuration(t)<=minutes).sort((a,b)=>taskScore(b)-taskScore(a)).slice(0,8);els.smartResultsTitle.textContent=`Lo mejor para ${minutes>=60?formatMinutes(minutes):`${minutes} min`}`;renderSmartList(tasks);const seq=buildSequence(minutes);state.sequenceCandidateIds=seq.map(t=>t.id);els.sequenceStartBtn.hidden=seq.length<2;if(seq.length>=2){const total=seq.reduce((s,t)=>s+predictedDuration(t),0),label=contextLabelForTask(seq[0]);els.contextGroupSummary.hidden=false;els.contextGroupSummary.textContent=`${seq.length} ${label.toLowerCase()} · ${formatMinutes(total)}`;}else els.contextGroupSummary.hidden=true;els.smartResults.hidden=false;setTimeout(()=>els.smartResults.scrollIntoView({behavior:reduceMotion()?'auto':'smooth',block:'nearest'}),0);}
-function toggleLowEnergy(){state.lowEnergyMode=!state.lowEnergyMode;renderHome();renderContextIsland();if(state.lowEnergyMode){document.body.classList.add('home-results-open');state.quickMode='low-energy';const tasks=activeTasks().filter(t=>t.energy==='low'||(t.energy==='normal'&&predictedDuration(t)<=25)).sort((a,b)=>taskScore(b)-taskScore(a)).slice(0,8);els.smartResultsTitle.textContent='Poco esfuerzo, buen avance';renderSmartList(tasks);els.smartResults.hidden=false;}else{els.smartResults.hidden=true;state.quickMode=null;document.body.classList.remove('home-results-open');}}
+function toggleLowEnergy(){state.lowEnergyMode=!getDaySignals(todayISO()).lowEnergy;state.ui.lowEnergyDate=state.lowEnergyMode?todayISO():'';setDaySignal(todayISO(),'lowEnergy',state.lowEnergyMode);recordAdaptationEvent(state.lowEnergyMode?'low-energy-on':'low-energy-off');renderHome();renderContextIsland();if(state.lowEnergyMode){document.body.classList.add('home-results-open');state.quickMode='low-energy';const tasks=activeTasks().filter(t=>t.energy==='low'||(t.energy==='normal'&&predictedDuration(t)<=25)).sort((a,b)=>taskScore(b)-taskScore(a)).slice(0,8);els.smartResultsTitle.textContent='Poco esfuerzo, buen avance';renderSmartList(tasks);els.smartResults.hidden=false;}else{els.smartResults.hidden=true;state.quickMode=null;document.body.classList.remove('home-results-open');}}
 function closeSmartResults(){state.quickMode=null;state.sequenceCandidateIds=[];els.sequenceStartBtn.hidden=true;els.contextGroupSummary.hidden=true;els.smartResults.hidden=true;document.body.classList.remove('home-results-open');}
 function openNowMode(taskId=null,queue=null){
   let task=taskId?state.tasks.find(t=>t.id===taskId):state.ui.activeNowTaskId?state.tasks.find(t=>t.id===state.ui.activeNowTaskId):getNextBestAction();
@@ -1667,11 +1694,11 @@ async function resetApplicationMemory(){
   }
 }
 
-function toggleTightDay(){state.ui.tightDayDate=state.ui.tightDayDate===todayISO()?'':todayISO();saveUI();render();toast(state.ui.tightDayDate?'Capacidad de hoy reducida.':'Capacidad normal restaurada.');}
+function toggleTightDay(){const active=state.ui.tightDayDate!==todayISO();state.ui.tightDayDate=active?todayISO():'';setDaySignal(todayISO(),'tight',active);recordAdaptationEvent(active?'tight-day-on':'tight-day-off');saveUI();render();toast(active?'Capacidad de hoy reducida.':'Capacidad normal restaurada.');}
 function openDayProfile(){const current=(state.ui.dayProfileDate===todayISO()?state.ui.dayProfile:state.settings.defaultProfile)||'normal';showActionSheet(`${sheetHeader('Perfil del día','¿Qué ritmo tiene hoy?')}<div class="profile-grid">${[['normal','Normal','Tu capacidad habitual'],['intense','Intenso','Algo más de margen'],['light','Ligero','Menos compromisos'],['rest','Descanso','Solo lo esencial']].map(([v,t,s])=>`<button class="${current===v?'selected':''}" data-day-profile="${v}"><strong>${t}</strong><span>${s}</span></button>`).join('')}</div>`);}
 function setDayProfile(profile){state.ui.dayProfileDate=todayISO();state.ui.dayProfile=profile;saveUI();closeActionSheet();render();}
 function openRecoveryReview(){const r=getRecoverySummary();showActionSheet(`${sheetHeader('Volver sin agobios','Ordenar lo que quedó atrás')}<div class="action-summary"><strong>${r.important.length}</strong> siguen siendo importantes · <strong>${r.movable.length}</strong> pueden buscar hueco · <strong>${r.stale.length}</strong> quizá ya no tienen sentido.</div><div class="sheet-actions"><button class="ghost-btn" data-recovery-dismiss>Solo revisar</button><button class="primary-btn" data-recovery-apply>Repartir con margen</button></div>`);}
-function applyRecovery(){const r=getRecoverySummary();mutateWithUndo('Pendientes reorganizados',()=>{r.movable.forEach(t=>{t.scheduledDate=findNextGap(t);t.snoozeCount+=1;t.lastDecisionReason='time';});});state.ui.recoveryPendingDays=0;saveUI();closeActionSheet();}
+function applyRecovery(){const r=getRecoverySummary();mutateWithUndo('Pendientes reorganizados',()=>{r.movable.forEach(t=>{t.scheduledDate=findNextGap(t);t.lastDecisionReason='recovery';t.adaptationType='systemReplanned';});});state.ui.recoveryPendingDays=0;saveUI();closeActionSheet();}
 function openStaleReview(){const tasks=getStaleTasks().slice(0,6);showActionSheet(`${sheetHeader('Tareas que envejecen','¿Siguen mereciendo espacio?')}<div class="action-list">${tasks.map(t=>actionOption({icon:'clock',title:t.title,sub:`${t.snoozeCount} aplazamientos · creada ${formatDate((t.createdAt||'').slice(0,10))}`,attrs:`data-stale-task="${t.id}"`})).join('')}</div>`);}
 function openStaleTask(id){const t=state.tasks.find(x=>x.id===id);if(!t)return;showActionSheet(`${sheetHeader('Decidir',t.title)}<div class="action-list">${actionOption({icon:'check',title:'Sí, sigue importando',attrs:`data-stale-keep="${id}"`})}${actionOption({icon:'calendar',title:'Buscarle hueco',attrs:`data-stale-gap="${id}"`})}${actionOption({icon:'archive',title:'Algún día / archivar',attrs:`data-stale-archive="${id}"`})}</div>`);}
 function openInboxReview(){const tasks=activeTasks().filter(t=>t.inbox).slice(0,10);showActionSheet(`${sheetHeader('Inbox invisible',`${tasks.length} cosas por colocar`)}<p class="action-meta">Decide solo cuándo; los detalles pueden esperar.</p><div class="action-list">${tasks.map(t=>`<div class="inbox-place-row"><strong>${escapeHTML(t.title)}</strong><div><button data-inbox-place="today" data-id="${t.id}">Hoy</button><button data-inbox-place="week" data-id="${t.id}">Semana</button><button data-inbox-place="later" data-id="${t.id}">Luego</button></div></div>`).join('')}</div>`);}
@@ -1720,7 +1747,7 @@ async function unlockLocal(){const hash=await sha256(els.localLockPin.value||'')
 function openConflictReview(){const c=state.conflicts[0];if(!c){toast('No hay conflictos pendientes.');return;}showActionSheet(`${sheetHeader('Cambio en otro dispositivo','Solo aparece cuando hace falta')}<div class="conflict-card"><strong>Este dispositivo</strong><span>${escapeHTML(c.local.title)} · ${formatDate(c.local.scheduledDate)}</span></div><div class="conflict-card"><strong>Otro dispositivo</strong><span>${escapeHTML(c.remote.title)} · ${formatDate(c.remote.scheduledDate)}</span></div><div class="sheet-actions three"><button class="ghost-btn" data-conflict="remote">Usar nueva</button><button class="ghost-btn" data-conflict="merge">Combinar</button><button class="primary-btn" data-conflict="local">Conservar mía</button></div>`);}
 function resolveConflict(choice){const c=state.conflicts.shift();if(!c)return;const i=state.tasks.findIndex(t=>t.id===c.remote.id);if(choice==='remote'){if(i>=0)state.tasks[i]=normalizeTask(c.remote);}else if(choice==='merge'){if(i>=0)state.tasks[i]=mergeConflictFields(c.local,c.remote);state.sync.forceRetry=true;}else{const t=state.tasks.find(x=>x.id===c.local.id);if(t){t.modifiedAt=new Date().toISOString();state.sync.forceRetry=true;}}saveAll();closeActionSheet();render();if(state.conflicts.length)setTimeout(openConflictReview,100);}
 function detectRemoteConflicts(remoteTasks){const preserve=new Set();if(!state.sync.initialized)return preserve;const localMap=new Map(state.tasks.map(t=>[t.id,t])),baseline=state.sync.baselineTasks||new Map();for(const remote of remoteTasks){const local=localMap.get(remote.id);if(!local||remote.lastDeviceId===state.sync.deviceId)continue;const localChanged=baseline.get(local.id)&&baseline.get(local.id)!==taskFingerprint(local);const remoteDiff=taskFingerprint(local)!==taskFingerprint(remote);if(localChanged&&remoteDiff){preserve.add(local.id);if(!state.conflicts.some(c=>c.local.id===local.id))state.conflicts.push({local:deepClone(local),remote:deepClone(remote)});}}if(state.conflicts.length)setTimeout(()=>{if(!document.querySelector('.modal-layer.is-open'))openConflictReview();},150);return preserve;}
-function updateLastOpened(){const previous=state.ui.lastOpenedDate;const today=todayISO();if(previous&&previous<today){const days=Math.max(0,dayDistance(today)-dayDistance(previous));state.ui.recoveryPendingDays=days>=3?days:0;}state.ui.lastOpenedDate=today;state.ui.lastOpenedAt=new Date().toISOString();saveUI();}
+function updateLastOpened(){const previous=state.ui.lastOpenedDate;const today=todayISO();if(previous&&previous<today){const days=Math.max(0,dayDistance(today)-dayDistance(previous));state.ui.recoveryPendingDays=days>=3?days:0;if(days>=3)setDaySignal(today,'absence',true);}state.ui.lastOpenedDate=today;state.ui.lastOpenedAt=new Date().toISOString();saveUI();}
 function updateInstallStatus(){if(!els.installAppStatus)return;const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;if(standalone){els.installAppStatus.textContent='Ya está instalada';els.installAppBtn.disabled=true;}else if(state.installPrompt){els.installAppStatus.textContent='Instalar con un toque';els.installAppBtn.disabled=false;}else if(isIOS()){els.installAppStatus.textContent='Añadir a pantalla de inicio en Safari';els.installAppBtn.disabled=false;}else{els.installAppStatus.textContent='Disponible cuando el navegador lo permita';els.installAppBtn.disabled=false;}}
 async function installPWA(){if(state.installPrompt){const prompt=state.installPrompt;state.installPrompt=null;await prompt.prompt();await prompt.userChoice;updateInstallStatus();return;}closeSheet(els.settingsSheet);if(isIOS()){showActionSheet(`${sheetHeader('Instalar en iPhone','Añadir a pantalla de inicio')}<div class="action-summary">En Safari: pulsa <strong>Compartir</strong> → <strong>Añadir a pantalla de inicio</strong>. iOS no permite lanzar ese cuadro automáticamente desde una web.</div><div class="sheet-actions"><button class="primary-btn" data-close-action>Entendido</button></div>`);}else{showActionSheet(`${sheetHeader('Instalar app','Tu navegador decide cuándo ofrecerla')}<div class="action-summary">La PWA ya incluye manifest, modo standalone y funcionamiento offline. Si el navegador no muestra instalación todavía, abre su menú y busca “Instalar aplicación”.</div><div class="sheet-actions"><button class="primary-btn" data-close-action>Entendido</button></div>`);}}
 
@@ -2193,8 +2220,16 @@ window.addEventListener('focus',refreshWorkFocusFromClock);
 window.addEventListener('pageshow',refreshWorkFocusFromClock);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshWorkFocusFromClock();});
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=6.0',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=6.0.1',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
 
+function initCompactSettings(){
+  document.querySelectorAll('.settings-sheet .settings-section').forEach((section,index)=>{
+    if(section.dataset.compactReady)return;section.dataset.compactReady='1';section.classList.add('settings-collapsible');
+    const title=section.querySelector('h3');if(!title)return;const head=document.createElement('button');head.type='button';head.className='settings-collapse-head';head.innerHTML=`<span>${escapeHTML(title.textContent)}</span><span aria-hidden="true">⌄</span>`;title.replaceWith(head);
+    const kicker=section.querySelector(':scope > .section-kicker');if(kicker)head.prepend(kicker);
+    const open=index===0;section.classList.toggle('is-open',open);head.setAttribute('aria-expanded',String(open));head.addEventListener('click',()=>{const next=!section.classList.contains('is-open');document.querySelectorAll('.settings-sheet .settings-collapsible.is-open').forEach(x=>{if(x!==section){x.classList.remove('is-open');x.querySelector('.settings-collapse-head')?.setAttribute('aria-expanded','false');}});section.classList.toggle('is-open',next);head.setAttribute('aria-expanded',String(next));});
+  });
+}
 function auditCapabilities(){
   if(els.taskVoiceBtn&&!('SpeechRecognition'in window)&&!('webkitSpeechRecognition'in window))els.taskVoiceBtn.hidden=true;
   if(els.quickVoiceBtn&&!('SpeechRecognition'in window)&&!('webkitSpeechRecognition'in window))els.quickVoiceBtn.hidden=true;
@@ -2209,7 +2244,7 @@ function processLaunchAction(){
   const clean=location.pathname+(location.hash||'');history.replaceState({},'',clean);
   setTimeout(()=>{if(action==='new')openTaskSheet();else if(action==='now')openNowMode();else if(action==='search')openUniversalSearch();},350);
 }
-auditCapabilities();cleanupOldTrash();createWeeklySnapshot();updateLastOpened();ensureDailyFocus();render();checkReminders();updateSyncUI();processShareTarget();processLaunchAction();setTimeout(()=>{if(state.security.enabled||state.security.biometricCredentialId)showLocalLock();},250);initCloudSync().catch(error=>{console.error('Firebase sync:',error);setSyncStatus('error','La sincronización con Firebase no pudo iniciarse.');});
+initCompactSettings();auditCapabilities();cleanupOldTrash();createWeeklySnapshot();updateLastOpened();ensureDailyFocus();render();checkReminders();updateSyncUI();processShareTarget();processLaunchAction();setTimeout(()=>{if(state.security.enabled||state.security.biometricCredentialId)showLocalLock();},250);initCloudSync().catch(error=>{console.error('Firebase sync:',error);setSyncStatus('error','La sincronización con Firebase no pudo iniciarse.');});
 
 /* iOS PWA: when the keyboard changes the visual viewport, keep the edited field reachable. */
 document.addEventListener('focusin',event=>{

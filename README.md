@@ -1,6 +1,6 @@
-# Organizador personal inteligente · v6.0 RC2
+# Organizador personal inteligente · v6.0
 
-La v6.0 RC2 mantiene la filosofía de la aplicación sin romper la sincronización existente:
+La v6.0 mantiene la filosofía de la aplicación sin romper la sincronización existente:
 
 - **Web / escritorio = Planning Studio** para pensar, equilibrar y revisar la semana.
 - **PWA / móvil = Capturar y hacer** con una interfaz más silenciosa, uso con una mano y acceso directo a la siguiente acción.
@@ -8,7 +8,7 @@ La v6.0 RC2 mantiene la filosofía de la aplicación sin romper la sincronizaci�
 - La inteligencia principal continúa siendo **local-first**: scoring, estimaciones, agrupación, riesgo y recomendaciones no requieren una API de IA para responder.
 
 
-## Novedades v6.0 RC2
+## Novedades v6.0
 
 - Duración realmente opcional en Trabajo, Personal y Estudios; internamente se guarda como `null` cuando no se estima.
 - Al completar una tarea sin estimación, la app pregunta de forma no bloqueante el tiempo real empleado, con presets rápidos y opción de omitir.
@@ -22,7 +22,7 @@ La v6.0 RC2 mantiene la filosofía de la aplicación sin romper la sincronizaci�
 - Mejoras de accesibilidad y PWA: hitboxes mínimas, focus visible, reduced motion, visualViewport, safe areas, feature detection y flujo de actualización del Service Worker.
 - `schemaVersion 6`, con normalización compatible de tareas existentes y sin cambios destructivos en Firebase.
 
-## Base funcional v6.0 RC2
+## Base funcional v6.0
 
 - **Novedades premium**: el historial de cambios se presenta ahora con una tarjeta principal, tres mejoras destacadas y un historial compacto de versiones anteriores.
 - **Planificación de fin de semana en Windows PWA**: los sábados y domingos aparece `Dejar planificada la semana próxima` en Planning Studio. Permite escoger el día de la semana siguiente, crear tareas directamente agendadas y distribuir pendientes sin fecha según la carga. Mientras la sesión está activa, las nuevas tareas quedan planificadas para el día seleccionado salvo que indiques expresamente otra fecha.
@@ -91,7 +91,7 @@ Para una primera instalación nueva, consulta `CONFIGURACION-FIREBASE.md` y publ
 2. Sustituye en GitHub el contenido de la versión anterior por el contenido de este ZIP.
 3. Comprueba que `index.html` queda en la raíz del repositorio.
 4. Espera a que GitHub Pages publique la nueva versión.
-5. Cierra y vuelve a abrir la PWA. El Service Worker usa una caché nueva de v6.0 RC2.
+5. Cierra y vuelve a abrir la PWA. El Service Worker usa una caché nueva de v6.0.
 
 Los datos sincronizados no se borran. Las preferencias puramente locales del dispositivo pueden evolucionar de forma independiente.
 
@@ -110,13 +110,13 @@ Algunas capacidades dependen del navegador o sistema operativo, por ejemplo reco
 - `firestore.rules` — reglas de seguridad de Firestore.
 
 
-## 6.0 RC2 · Stability & Polish
+## 6.0 · Stability & Polish
 
 Versión centrada en robustez: duración opcional y tiempo real al completar, tareas por pasos, overlays unificados, protección de gestos/doble ejecución, Undo temporal, toasts en cola, sincronización incremental más resistente, diagnóstico local, accesibilidad, dark mode y auditoría PWA.
 
-## Consolidación técnica 6.0 RC2
+## Consolidación técnica 6.0
 
-La 6.0 RC2 separa el núcleo determinista (`core.js`) y la detección de plataforma (`platform.js`) del coordinador principal. El esquema de datos continúa en 6 y la configuración/rutas Firebase no cambian. Se añade `ARCHITECTURE.md` y una regresión local reproducible en `tests/core-regression.js`.
+La 6.0 separa el núcleo determinista (`core.js`) y la detección de plataforma (`platform.js`) del coordinador principal. El esquema de datos continúa en 6 y la configuración/rutas Firebase no cambian. Se añade `ARCHITECTURE.md` y una regresión local reproducible en `tests/core-regression.js`.
 
 Para ejecutar la regresión del núcleo con Node.js:
 
@@ -125,7 +125,7 @@ Para ejecutar la regresión del núcleo con Node.js:
 La modularización es deliberadamente progresiva: no se ha reescrito sincronización, tareas o Planning Studio de una sola vez para evitar introducir pérdida de datos o regresiones de interacción.
 
 
-## 6.0 RC2 · correcciones de la auditoría física
+## 6.0 · correcciones de la auditoría física
 - Check de completar: hitbox accesible de 44 px con círculo visual de 20 px.
 - Toast de actualización iOS: corregido el conflicto `top` + `bottom` que podía estirarlo verticalmente.
 - Añadir desde Trabajo/Personal/Estudios fija el destino y oculta Área; el `+` general mantiene la elección libre.
@@ -135,7 +135,7 @@ La modularización es deliberadamente progresiva: no se ha reescrito sincronizac
 - Ajustes: agrupación visual en tarjetas y jerarquía más consistente.
 
 
-### 6.0 RC2 · Daily-use foundation
+### 6.0 · Daily-use foundation
 - ADE Core: unified DayState, dynamic capacity, elapsed-time awareness, temporal priority, decomposed risk, robust duration prediction, confidence and formal task states.
 - Inclusive labels: “Estoy cansado/a” and “Hoy voy justo/a”.
 - Completion control redesigned with a compact rounded-square mark and independent 44px hit target.

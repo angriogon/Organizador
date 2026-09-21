@@ -1257,7 +1257,7 @@ body.modal-open { position:fixed; width:100%; left:0; right:0; }
 :root[data-appearance="dark"] .nav-item.active svg{opacity:1}
 
 
-/* v6.0 RC2 · completion control: stable 44px hit area, compact visual mark. */
+/* v6.0 · completion control: stable 44px hit area, compact visual mark. */
 .task-item .swipe-content{grid-template-columns:44px minmax(0,1fr) auto;gap:6px}
 .task-check{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;border-radius:12px!important;display:grid!important;place-items:center!important}
 .task-check::before{width:18px!important;height:18px!important;border-radius:6px!important;border:1.5px solid #c8d0d7!important;background:#fff!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
@@ -1268,3 +1268,50 @@ body.modal-open { position:fixed; width:100%; left:0; right:0; }
 :root[data-appearance="dark"] .task-check:hover::before,:root[data-appearance="dark"] .task-check:focus-visible::before{background:#222a31!important;border-color:#98a3ad!important}
 :root[data-appearance="dark"] .task-item.is-done .task-check::before{background:#89949e!important;border-color:#89949e!important}
 @media(max-width:760px){.task-item .swipe-content{grid-template-columns:44px minmax(0,1fr) auto;gap:4px}.task-check::before{width:19px!important;height:19px!important}}
+
+/* =========================================================
+   v6.0 stable · ADE Decisions + installed-app polish
+   ========================================================= */
+.recommendation-reason{display:block;margin-top:3px;font-size:10px;font-weight:600;line-height:1.3;color:var(--muted)}
+.smart-recommendation>span{min-width:0}.smart-recommendation strong{flex:0 0 auto}
+
+/* Settings are grouped visually instead of reading as one continuous form. */
+.settings-organized{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-content:start}
+.settings-organized>.sheet-handle,.settings-organized>.sheet-header,.settings-organized>.settings-primary,.settings-organized>.sync-settings-section,.settings-organized>.sheet-actions{grid-column:1/-1}
+.settings-organized>.settings-section{margin:0!important;min-width:0}
+.settings-intro{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.35}
+.settings-primary{background:linear-gradient(145deg,rgba(120,135,150,.06),transparent)!important}
+.settings-sheet .toggle-row{margin-block:6px}
+.settings-sheet .micro-note{line-height:1.45}
+
+/* Windows PWA: explicit, persistent shortcut lock in the existing top action group. */
+.keyboard-lock-btn.active{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important}
+
+/* iOS installed app: draw under the status bar while keeping controls in the safe area. */
+@media (display-mode:standalone) and (max-width:760px){
+  .app-shell{padding-top:max(10px,env(safe-area-inset-top,0px))}
+  .topbar{padding-top:2px}
+  .modal-layer{height:var(--visual-vh,100dvh);max-height:var(--visual-vh,100dvh);align-items:stretch;padding-top:max(6px,env(safe-area-inset-top,0px))}
+  .modal-layer .sheet{height:calc(var(--visual-vh,100dvh) - max(12px,env(safe-area-inset-top,0px)) - max(8px,env(safe-area-inset-bottom,0px)));max-height:none;display:flex;flex-direction:column}
+  .modal-layer .sheet-body{height:100%;max-height:none;overflow-y:auto;-webkit-overflow-scrolling:touch;scroll-padding-top:82px;scroll-padding-bottom:110px}
+  .task-sheet .compact-task-header{position:sticky;top:-9px;z-index:6;background:var(--surface-solid);padding-top:9px}
+  .task-sheet .compact-save-row{position:sticky;bottom:calc(-18px - env(safe-area-inset-bottom,0px));z-index:7;margin-top:14px;padding:12px 0 calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(to bottom,rgba(255,255,255,.92),#fff 28%)}
+  :root[data-appearance="dark"] .task-sheet .compact-task-header{background:#171b1f}
+  :root[data-appearance="dark"] .task-sheet .compact-save-row{background:linear-gradient(to bottom,rgba(23,27,31,.92),#171b1f 28%)}
+}
+
+/* Calendar selection: relative naming only for the currently visible week. */
+.day-agenda h3,#dayAgendaTitle{text-transform:none}
+
+/* Completion feedback must sit above the contextual action and bottom navigation. */
+@media(max-width:760px){
+  .toast{bottom:calc(158px + env(safe-area-inset-bottom,0px))!important;max-width:calc(100vw - 32px)}
+  .undo-bar{left:16px!important;right:16px!important;width:auto!important;bottom:calc(158px + env(safe-area-inset-bottom,0px))!important;transform:none!important;max-width:none!important}
+  .settings-organized{display:block}
+  .settings-organized>.settings-section{margin-top:12px!important}
+}
+
+/* Action menus should fit their content without becoming a second scroll surface. */
+.action-sheet{height:auto!important;max-height:calc(var(--visual-vh,100dvh) - 24px)!important}
+.action-sheet .sheet-body{height:auto!important;max-height:calc(var(--visual-vh,100dvh) - 40px)!important;overscroll-behavior:none}
+@media (display-mode:standalone) and (max-width:760px){body.modal-open{position:static!important;width:auto!important;left:auto!important;right:auto!important;top:auto!important}}

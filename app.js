@@ -77,7 +77,7 @@ const state = {
 };
 
 const ids = [
-  'currentDate','pageTitle','capacityRing','homeView','tasksView','calendarView','planningView','planningInsight','planningWeekBoard','planningWeekLabel','planningPrevWeekBtn','planningNextWeekBtn','planningThisWeekBtn','weekendPlanBtn','riskList','smartLists','outcomeList','premiumInsight','yearHeatmap','planningBalanceBtn','planningCleanBtn','newOutcomeBtn','homeCard','greeting','adaptiveLine','loadEmoji','loadPercent','loadStatus','capacityContext','dayProfileBtn','dayProfileLabel','loadBar','focusHeadingText','focusProgress','topThreeList','startNextBtn','lowEnergyBtn','tightDayBtn','smartRecommendation','miniAgendaText','miniAgendaOpen','gapChips','gestureHint','smartResults','smartResultsTitle','contextGroupSummary','smartTaskList','sequenceStartBtn','categoryTitle','workFocusBtn','categoryTaskList','categoryEmpty','calendarMonthTitle','calendarGrid','calendarWeekStrip','weekCapacityStrip','dayAgendaTitle','dayAgendaLoad','dayAgendaList','contextIsland','fab','fabMenu','taskSheet','taskForm','taskSheetKicker','taskSheetTitle','taskEditId','taskTitle','taskCategory','taskDuration','taskScheduledDate','taskScheduledTime','taskDeadline','taskRecurrence','taskPriority','taskEnergy','taskTodayPriority','taskNonNegotiable','taskProject','taskOutcome','taskDependsOn','taskContext','taskAdvancedToggle','taskAdvancedFields','taskDateCycle','taskPriorityCycle','taskVoiceBtn','quickVoiceBtn','taskHistoryBtn','taskCapacityPreview','quickSheet','quickForm','quickTaskInput','reminderSheet','reminderForm','reminderTitle','reminderDate','reminderTime','reminderCategory','actionSheet','actionSheetContent','settingsSheet','settingsForm','settingsName','settingsCapacity','settingsHaptics','settingsWeekendMode','settingsTheme','settingsDefaultProfile','settingsPrivacyMode','settingsIntelligentMode','settingsBuffer','settingsMaxHigh','settingsWorkFreeWeekend','settingsAppearance','openTrashBtn','exportCsvBtn','autoBackupBtn','syncIssueBadge','syncStateDot','syncAccountStatus','syncDeviceStatus','syncAuthPanel','syncEmail','syncPassword','syncSignInBtn','syncCreateBtn','syncResetBtn','syncSignedPanel','syncNowBtn','syncSignOutBtn','googleSyncStatus','icsFileInput','installAppBtn','installAppStatus','localLockBtn','localLockStatus','biometricSetupBtn','biometricStatus','localBiometricBtn','exportBackupBtn','importBackupBtn','backupFileInput','resetAppBtn','nowMode','nowTaskTitle','nowTaskMeta','nowCompleteBtn','nowPauseBtn','nowSnoozeBtn','nowNextBtn','nowMoreBtn','privacyCurtain','localLockScreen','localLockPin','localUnlockBtn','localLockError','undoBar','undoText','undoBtn','toast'
+  'currentDate','pageTitle','capacityRing','homeView','tasksView','calendarView','planningView','planningInsight','planningWeekBoard','planningWeekLabel','planningPrevWeekBtn','planningNextWeekBtn','planningThisWeekBtn','weekendPlanBtn','riskList','smartLists','outcomeList','premiumInsight','yearHeatmap','planningBalanceBtn','planningCleanBtn','newOutcomeBtn','homeCard','greeting','adaptiveLine','loadEmoji','loadPercent','loadStatus','capacityContext','dayProfileBtn','dayProfileLabel','loadBar','focusHeadingText','focusProgress','topThreeList','startNextBtn','lowEnergyBtn','tightDayBtn','smartRecommendation','miniAgendaText','miniAgendaOpen','gapChips','gestureHint','smartResults','smartResultsTitle','contextGroupSummary','smartTaskList','sequenceStartBtn','categoryTitle','workFocusBtn','categoryTaskList','categoryEmpty','calendarMonthTitle','calendarGrid','calendarWeekStrip','weekCapacityStrip','dayAgendaTitle','dayAgendaLoad','dayAgendaList','contextIsland','fab','fabMenu','taskSheet','taskForm','taskSheetKicker','taskSheetTitle','taskEditId','taskTitle','taskCategory','taskDuration','taskScheduledDate','taskScheduledTime','taskDeadline','taskRecurrence','taskPriority','taskEnergy','taskTodayPriority','taskNonNegotiable','taskProject','taskOutcome','taskDependsOn','taskContext','taskAdvancedToggle','taskAdvancedFields','taskDateCycle','taskPriorityCycle','taskVoiceBtn','quickVoiceBtn','taskHistoryBtn','taskCapacityPreview','quickSheet','quickForm','quickTaskInput','reminderSheet','reminderForm','reminderTitle','reminderDate','reminderTime','reminderCategory','actionSheet','actionSheetContent','settingsSheet','settingsForm','settingsName','settingsCapacity','settingsHaptics','settingsWeekendMode','settingsTheme','settingsDefaultProfile','settingsPrivacyMode','settingsIntelligentMode','settingsBuffer','settingsMaxHigh','settingsWorkFreeWeekend','settingsAppearance','openTrashBtn','exportCsvBtn','autoBackupBtn','syncIssueBadge','keyboardLockBtn','syncStateDot','syncAccountStatus','syncDeviceStatus','syncAuthPanel','syncEmail','syncPassword','syncSignInBtn','syncCreateBtn','syncResetBtn','syncSignedPanel','syncNowBtn','syncSignOutBtn','googleSyncStatus','icsFileInput','installAppBtn','installAppStatus','localLockBtn','localLockStatus','biometricSetupBtn','biometricStatus','localBiometricBtn','exportBackupBtn','importBackupBtn','backupFileInput','resetAppBtn','nowMode','nowTaskTitle','nowTaskMeta','nowCompleteBtn','nowPauseBtn','nowSnoozeBtn','nowNextBtn','nowMoreBtn','privacyCurtain','localLockScreen','localLockPin','localUnlockBtn','localLockError','undoBar','undoText','undoBtn','toast'
 ];
 const els = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
 
@@ -390,9 +390,9 @@ function externalStartMinutes(event) {
 function getBusyIntervals(date) {
   const intervals=[];
   state.externalEvents.filter(e=>e.date===date && Number(e.duration||0)>0).forEach(e=>{
-    const start=externalStartMinutes(e); if(start!==null) intervals.push([start,start+Number(e.duration||0)]);
+    const start=externalStartMinutes(e); if(start!==null) intervals.push([Math.max(0,start-10),start+Number(e.duration||0)+10]);
   });
-  tasksOn(date).filter(t=>t.scheduledTime).forEach(t=>{ const start=parseTimeMinutes(t.scheduledTime); if(start!==null) intervals.push([start,start+predictedDuration(t)]); });
+  tasksOn(date).filter(t=>t.scheduledTime).forEach(t=>{ const start=parseTimeMinutes(t.scheduledTime); if(start!==null) intervals.push([Math.max(0,start-5),start+predictedDuration(t)+5]); });
   return intervals.sort((a,b)=>a[0]-b[0]);
 }
 function getFreeGaps(date) {
@@ -425,23 +425,33 @@ function getMiniAgendaText() {
   if(!upcoming.length) return state.externalEvents.length || items.length ? 'Agenda despejada' : 'Sin eventos conectados';
   return upcoming.map(i=>`${i.time} ${i.title}`).join(' · ');
 }
-function getNextBestAction() {
-  const dayState=getDayState(todayISO());
-  let candidates=getFocusTasks().filter(t=>!t.completedAt&&!t.archivedAt&&!t.deletedAt&&!t.inbox&&!isTaskBlocked(t));
-  if(!candidates.length)candidates=dayState.remainingTasks.filter(t=>!t.inbox&&!isTaskBlocked(t)).sort((a,b)=>getTemporalPriority(b).score-getTemporalPriority(a).score).slice(0,10);
-  const gap=getUsableGaps(todayISO())[0],available=gap?.duration||Math.max(15,getDayCapacity(todayISO())-getDayLoad(todayISO()).mental);
-  const nowMinutes=new Date().getHours()*60+new Date().getMinutes();
-  return candidates.slice().sort((a,b)=>{
-    const adjusted=t=>{
-      let s=taskScore(t),dur=predictedDuration(t);
-      if(dur<=available)s+=20;else s-=Math.min(60,(dur-available)*1.2);
-      if(t.scheduledTime){const diff=parseTimeMinutes(t.scheduledTime)-nowMinutes;if(diff>=0&&diff<=90)s+=20;if(diff>180)s-=8;}
-      if(state.lowEnergyMode)s+=(t.energy==='low'?30:t.energy==='normal'&&dur<=25?15:-20);
-      return s;
-    };
-    return adjusted(b)-adjusted(a);
-  })[0]||null;
+function getCurrentContext(){
+  const active=state.ui.activeNowTaskId&&state.tasks.find(t=>t.id===state.ui.activeNowTaskId&&!t.completedAt);
+  return active?contextFromTask(active):'';
 }
+function adeTaskDecisionScore(task,{available=60,currentContext=''}={}){
+  let score=getTemporalPriority(task).score,dur=predictedDuration(task),reasons=[];
+  if(task.deadline&&task.deadline<=todayISO()){score+=24;reasons.push(task.deadline<todayISO()?'está vencida':'vence hoy');}
+  if(task.nonNegotiableDate===todayISO()){score+=28;reasons.push('no se debe mover hoy');}
+  if(task.todayPriorityUntil===todayISO()){score+=20;reasons.push('está marcada como importante hoy');}
+  if(currentContext&&contextFromTask(task)===currentContext){score+=12;reasons.push('mantiene el contexto actual');}
+  if(dur<=available){score+=18;reasons.push('cabe en el hueco disponible');}
+  else { const overflow=dur-available; score-=Math.min(32,overflow*.35); if(dur>=60&&overflow<=30){score+=16;reasons.push('protege una tarea de trabajo profundo');} }
+  if(dur>=60&&getUsableGaps(todayISO()).some(g=>g.duration>=dur)){score+=15;reasons.push('hay un bloque continuo suficiente');}
+  if(isTaskBlocked(task)){score-=300;reasons=['está bloqueada'];}
+  return {task,score,duration:dur,reasons:[...new Set(reasons)].slice(0,3)};
+}
+function getADEDecision(){
+  const day=getDayState(todayISO()),gaps=getUsableGaps(todayISO()),gap=gaps[0],available=gap?.duration||Math.max(15,day.capacity.remaining-day.remainingMinutes),currentContext=getCurrentContext();
+  const pool=day.remainingTasks.filter(t=>!t.inbox&&!isTaskBlocked(t));
+  const ranked=pool.map(t=>adeTaskDecisionScore(t,{available,currentContext})).sort((a,b)=>b.score-a.score||String(a.task.id).localeCompare(String(b.task.id)));
+  const next=ranked[0]||null,moves=day.capacityRatio>100?getMoveSuggestions(todayISO(),85):[];
+  let intervention=null;
+  if(day.capacityRatio>100&&moves.length){const moved=moves.reduce((sum,x)=>sum+effectiveTaskLoadMinutes(x.task),0),after=Math.max(0,Math.round(((day.remainingMinutes-moved)/Math.max(1,day.capacity.remaining))*100));intervention={type:'space',severity:'danger',moves,after,reasons:[`el plan ocupa ${day.capacityRatio}% de la capacidad restante`,`basta con mover ${moves.length} ${moves.length===1?'tarea':'tareas'}`]};}
+  else if(next) intervention={type:'next',severity:'calm',task:next.task,reasons:next.reasons};
+  return {day,gaps,available,next,intervention,ranked};
+}
+function getNextBestAction() { return getADEDecision().next?.task||null; }
 function getRecoverySummary(){
   const overdue=activeTasks().filter(t=>t.scheduledDate&&t.scheduledDate<todayISO());
   const important=overdue.filter(t=>t.priority==='high'||t.deadline&&t.deadline<=addDays(todayISO(),2)).sort((a,b)=>taskScore(b)-taskScore(a)).slice(0,3);
@@ -456,20 +466,16 @@ function getWeeklyPlanningInsight(){
   const over=capacity?Math.round((mental/capacity-1)*100):0;return {over,overDays};
 }
 function getRecommendation() {
-  const today=getDayLoad(todayISO());
-  if(today.percent>100){const moves=getMoveSuggestions(todayISO());const current=today.percent;let after=current;if(moves.length){const moved=moves.reduce((s,x)=>s+effectiveTaskLoadMinutes(x.task),0);after=Math.max(0,Math.round(((today.mental-moved)/today.capacity)*100));}return {type:'space',className:'danger',text:`😅 ${moves.length?`Mover ${moves.length} → ${after}%`:'Vas justo/a hoy'}`,action:'Hazme hueco'};}
-  if(state.ui.recoveryPendingDays>=3){const r=getRecoverySummary();if(r.important.length||r.movable.length||r.stale.length)return {type:'recovery',className:'warning',text:`Volver sin agobios · ${r.important.length} importantes`,action:'Ordenar'};}
-  const inbox=activeTasks().filter(t=>t.inbox);if(inbox.length>=3)return {type:'inbox',className:'',text:`${inbox.length} cosas por colocar`,action:'Ordenar'};
-  const important=getImportantTasks(),overdue=important.filter(isOverdueDeadline);if(overdue.length)return {type:'overdue',className:'warning',text:`⏰ ${overdue.length} ${overdue.length===1?'tarea vencida':'tareas vencidas'}`,action:'Revisar'};
-  const stale=getStaleTasks();if(stale.length)return {type:'stale',className:'',text:'¿Sigue teniendo sentido?',action:`Revisar ${Math.min(stale.length,4)}`};
-  const tomorrow=getDayLoad(addDays(todayISO(),1));if(tomorrow.percent>110)return {type:'tomorrow',className:'warning',text:`😅 Mañana viene al ${tomorrow.percent}%`,action:'Revisar'};
-  const weekly=getWeeklyPlanningInsight();if(weekly.overDays>=3)return {type:'life',className:'warning',text:`${weekly.overDays} días cargados esta semana`,action:'Simplificar'};
-  if(weekly.over>=12)return {type:'performance',className:'',text:`Semana +${weekly.over}% sobre capacidad`,action:'Ver'};
-  const attention=getAttentionReminders();if(attention.length)return {type:'attention',className:'',text:`🔔 ${attention.length} ${attention.length===1?'recordatorio pendiente':'recordatorios pendientes'}`,action:'Ver'};
-  if(state.ui.activeNowTaskId&&state.tasks.some(t=>t.id===state.ui.activeNowTaskId&&!t.completedAt&&!t.archivedAt))return {type:'continue',className:'',text:`Continuar · ${state.tasks.find(t=>t.id===state.ui.activeNowTaskId)?.title||'tarea'}`,action:'Abrir'};
+  const decision=getADEDecision(),today=decision.day;
+  if(decision.intervention?.type==='space'){const i=decision.intervention;return {type:'space',className:'danger',text:`El plan ya no cabe · mover ${i.moves.length} → ${i.after}%`,action:'Ajustar',reason:i.reasons.join(' · ')};}
+  if(state.ui.recoveryPendingDays>=3){const r=getRecoverySummary();if(r.important.length||r.movable.length||r.stale.length)return {type:'recovery',className:'warning',text:`Volver sin agobios · ${r.important.length} importantes`,action:'Ordenar',reason:'Prioriza lo importante antes de recuperar el resto.'};}
+  const important=getImportantTasks(),overdue=important.filter(isOverdueDeadline);if(overdue.length)return {type:'overdue',className:'warning',text:`⏰ ${overdue.length} ${overdue.length===1?'tarea vencida':'tareas vencidas'}`,action:'Revisar',reason:'Las fechas vencidas tienen prioridad sobre sugerencias menores.'};
+  const inbox=activeTasks().filter(t=>t.inbox);if(inbox.length>=3)return {type:'inbox',className:'',text:`${inbox.length} cosas por colocar`,action:'Ordenar',reason:'Reducir la entrada evita que queden tareas sin contexto.'};
+  if(state.ui.activeNowTaskId&&state.tasks.some(t=>t.id===state.ui.activeNowTaskId&&!t.completedAt&&!t.archivedAt))return {type:'continue',className:'',text:`Continuar · ${state.tasks.find(t=>t.id===state.ui.activeNowTaskId)?.title||'tarea'}`,action:'Abrir',reason:'Continuar evita un cambio de contexto innecesario.'};
+  const stale=getStaleTasks();if(stale.length)return {type:'stale',className:'',text:'Hay tareas antiguas por revisar',action:`Revisar ${Math.min(stale.length,4)}`,reason:'Conviene decidir si siguen teniendo sentido, no hacerlas por antigüedad.'};
+  const tomorrow=getDayLoad(addDays(todayISO(),1));if(tomorrow.percent>110)return {type:'tomorrow',className:'warning',text:`Mañana viene al ${tomorrow.percent}%`,action:'Revisar',reason:'Una corrección pequeña hoy evita sobrecarga mañana.'};
   return null;
 }
-
 
 
 /* --------------------------------------------------------------------------
@@ -1085,7 +1091,7 @@ function renderHome() {
   els.focusProgress.innerHTML=[0,1,2].map(i=>`<span class="progress-dot ${focus[i]?.completedAt?'done':''}"></span>`).join('');
   const next=getNextBestAction();els.startNextBtn.disabled=!next;els.startNextBtn.querySelector('span').textContent=state.ui.activeNowTaskId?'Continuar':'Empezar';
   els.lowEnergyBtn.classList.toggle('active',state.lowEnergyMode);
-  const recommendation=getRecommendation();els.smartRecommendation.hidden=!recommendation;if(recommendation){els.smartRecommendation.className=`smart-recommendation ${recommendation.className||''}`;els.smartRecommendation.dataset.recommendation=recommendation.type;els.smartRecommendation.innerHTML=`<span>${escapeHTML(recommendation.text)}</span><strong>${escapeHTML(recommendation.action)} →</strong>`;}
+  const recommendation=getRecommendation();els.smartRecommendation.hidden=!recommendation;if(recommendation){els.smartRecommendation.className=`smart-recommendation ${recommendation.className||''}`;els.smartRecommendation.dataset.recommendation=recommendation.type;els.smartRecommendation.title=recommendation.reason||'';els.smartRecommendation.setAttribute('aria-label',`${recommendation.text}. ${recommendation.reason||''}`);els.smartRecommendation.innerHTML=`<span>${escapeHTML(recommendation.text)}${recommendation.reason?`<small class="recommendation-reason">${escapeHTML(recommendation.reason)}</small>`:''}</span><strong>${escapeHTML(recommendation.action)} →</strong>`;}
   els.miniAgendaText.textContent=getMiniAgendaText();renderGapChips();els.gestureHint.hidden=state.ui.gestureUses>=3 || !focus.some(t=>!t.completedAt);
   applyHomeCompactness();
 }
@@ -1184,7 +1190,7 @@ function renderWeekCapacity(){
 function renderDayAgenda() {
   const date=state.calendarSelectedDate, items=getAgendaItems(date), untimed=state.tasks.filter(t=>!t.archivedAt&&!t.deletedAt&&t.scheduledDate===date&&!t.scheduledTime).map(t=>({id:t.id,type:'task',title:t.title,category:t.category,time:'—',minutes:9998,completed:Boolean(t.completedAt)}));
   const all=[...items,...untimed].sort((a,b)=>a.minutes-b.minutes);
-  els.dayAgendaTitle.textContent=date===todayISO()?'Hoy':formatDate(date,true);
+  const delta=Math.round((parseISODate(date)-parseISODate(todayISO()))/86400000);const sameWeek=Math.abs(delta)<=6;els.dayAgendaTitle.textContent=delta===0?'Hoy':delta===1?'Mañana':delta===2?'Pasado mañana':sameWeek?new Intl.DateTimeFormat('es-ES',{weekday:'long',day:'numeric'}).format(parseISODate(date)):formatDate(date,true);
   const load=getDayLoad(date);els.dayAgendaLoad.textContent=`${load.percent}% · ${formatMinutes(load.planned)}`;
   els.dayAgendaList.innerHTML=all.length?all.map(i=>`<div class="agenda-item ${i.completed?'completed':''}" ${i.type==='task'?`data-open-task="${i.id}"`:''}><span class="agenda-time">${i.time}</span><i class="agenda-color ${i.category}"></i><span class="agenda-title">${escapeHTML(i.title)}</span></div>`).join(''):'<div class="agenda-empty">Nada agendado para este día.</div>';
 }
@@ -1334,11 +1340,11 @@ function actionOption({icon,title,sub='',end='',attrs='',className=''}){return `
 function showActionSheet(html){els.actionSheetContent.innerHTML=html;openSheet(els.actionSheet);}
 
 function openWhatsNew(){
-  showActionSheet(`${sheetHeader('Novedades','Organizador 6.0 RC2')}
+  showActionSheet(`${sheetHeader('Novedades','Organizador 6.0')}
     <div class="release-hero">
       <span class="release-badge">FOUNDATION & RELIABILITY</span>
       <strong>Una base más limpia para lo que viene.</strong>
-      <p>La 6.0 RC2 consolida la base técnica sin cambiar tu forma de trabajar: núcleo común, detección de plataforma centralizada y regresiones reproducibles.</p>
+      <p>La 6.0 consolida el Adaptive Day Engine y la base técnica sin cambiar tu forma de trabajar: núcleo común, detección de plataforma centralizada y regresiones reproducibles.</p>
     </div>
     <div class="release-feature-grid">
       <article><span class="release-feature-icon">${ICON('clock')}</span><div><strong>Tiempo realmente opcional</strong><small>Las tareas pueden crearse sin estimación y registrar el tiempo real al completarlas.</small></div></article>
@@ -2135,6 +2141,21 @@ window.addEventListener('popstate',event=>{const open=topOpenOverlay();if(open){
 
 window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();state.installPrompt=event;updateInstallStatus();});window.addEventListener('appinstalled',()=>{state.installPrompt=null;toast('Organizador instalado.');updateInstallStatus();});
 
+function updateKeyboardLockUI(){
+  if(!els.keyboardLockBtn)return;const show=isWindowsPWA();els.keyboardLockBtn.hidden=!show;const locked=Boolean(state.ui.keyboardShortcutsLocked);els.keyboardLockBtn.classList.toggle('active',locked);els.keyboardLockBtn.setAttribute('aria-pressed',String(locked));els.keyboardLockBtn.title=locked?'Atajos bloqueados':'Bloquear atajos';els.keyboardLockBtn.setAttribute('aria-label',locked?'Activar atajos de teclado':'Bloquear atajos de teclado');
+}
+if(els.keyboardLockBtn)els.keyboardLockBtn.addEventListener('click',()=>{state.ui.keyboardShortcutsLocked=!state.ui.keyboardShortcutsLocked;saveUI();updateKeyboardLockUI();toast(state.ui.keyboardShortcutsLocked?'Atajos de teclado bloqueados.':'Atajos de teclado activados.');});
+updateKeyboardLockUI();
+/* Zoom intentionally locked for this installed-app experience. */
+document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
+document.addEventListener('dblclick',e=>{if(!e.target.closest('input,textarea,select'))e.preventDefault();},{passive:false});
+window.addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault();},{passive:false});
+window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&['+','-','=','0'].includes(e.key))e.preventDefault();},{capture:true});
+function syncIOSVisualViewport(){
+  if(!isIOS()||!window.visualViewport)return;document.documentElement.style.setProperty('--visual-vh',`${window.visualViewport.height}px`);const open=topOpenOverlay();if(open)open.style.height=`${window.visualViewport.height}px`;
+}
+if(window.visualViewport){visualViewport.addEventListener('resize',syncIOSVisualViewport);visualViewport.addEventListener('scroll',syncIOSVisualViewport);}syncIOSVisualViewport();
+
 function checkReminders(){const now=new Date(),date=toISO(now),minutes=now.getHours()*60+now.getMinutes();state.tasks.filter(t=>!t.completedAt&&!t.archivedAt&&t.kind==='reminder'&&t.scheduledDate===date&&t.scheduledTime).forEach(t=>{const target=parseTimeMinutes(t.scheduledTime);if(target!==null&&minutes>=target&&minutes-target<=2&&!state.ui.reminderNotified[t.id]){state.ui.reminderNotified[t.id]=new Date().toISOString();saveUI();buzz(20);toast(`🔔 ${t.title}`);}});}
 setInterval(checkReminders,30000);
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&state.settings.privacyMode){els.privacyCurtain.hidden=false;}else if(!document.hidden){els.privacyCurtain.hidden=true;checkReminders();if(state.security.enabled)showLocalLock();if(state.sync.user)pullCloudNow({silent:true}).catch(()=>{});}});
@@ -2150,7 +2171,7 @@ document.addEventListener('dragstart', event => {
 }, {capture:true});
 
 /* El zoom del navegador/SO permanece disponible por accesibilidad. */
-window.addEventListener('keydown',event=>{if(event.target.closest?.('input,textarea,select'))return;if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();openCommandPalette();return;}if(event.key==='/'){event.preventDefault();openUniversalSearch();return;}if(event.key.toLowerCase()==='n'){event.preventDefault();openTaskSheet();return;}if(event.key.toLowerCase()==='a'){event.preventDefault();openNowMode();return;}if(event.key.toLowerCase()==='t'){event.preventDefault();state.route='home';render();return;}});
+window.addEventListener('keydown',event=>{if(state.ui.keyboardShortcutsLocked||event.target.closest?.('input,textarea,select'))return;if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();openCommandPalette();return;}if(event.key==='/'){event.preventDefault();openUniversalSearch();return;}if(event.key.toLowerCase()==='n'){event.preventDefault();openTaskSheet();return;}if(event.key.toLowerCase()==='a'){event.preventDefault();openNowMode();return;}if(event.key.toLowerCase()==='t'){event.preventDefault();state.route='home';render();return;}});
 
 
 let homePull=null,islandHold=null;
@@ -2172,7 +2193,7 @@ window.addEventListener('focus',refreshWorkFocusFromClock);
 window.addEventListener('pageshow',refreshWorkFocusFromClock);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshWorkFocusFromClock();});
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=6.0-rc2',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=6.0',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
 
 function auditCapabilities(){
   if(els.taskVoiceBtn&&!('SpeechRecognition'in window)&&!('webkitSpeechRecognition'in window))els.taskVoiceBtn.hidden=true;
@@ -2189,3 +2210,9 @@ function processLaunchAction(){
   setTimeout(()=>{if(action==='new')openTaskSheet();else if(action==='now')openNowMode();else if(action==='search')openUniversalSearch();},350);
 }
 auditCapabilities();cleanupOldTrash();createWeeklySnapshot();updateLastOpened();ensureDailyFocus();render();checkReminders();updateSyncUI();processShareTarget();processLaunchAction();setTimeout(()=>{if(state.security.enabled||state.security.biometricCredentialId)showLocalLock();},250);initCloudSync().catch(error=>{console.error('Firebase sync:',error);setSyncStatus('error','La sincronización con Firebase no pudo iniciarse.');});
+
+/* iOS PWA: when the keyboard changes the visual viewport, keep the edited field reachable. */
+document.addEventListener('focusin',event=>{
+  if(!isIOS()||!event.target.closest?.('.modal-layer.is-open input,.modal-layer.is-open textarea,.modal-layer.is-open select'))return;
+  setTimeout(()=>event.target.scrollIntoView?.({block:'center',behavior:reduceMotion()?'auto':'smooth'}),180);
+});

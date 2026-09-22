@@ -960,7 +960,7 @@ function firebaseErrorText(error) {
   return map[code] || error?.message || 'No se pudo completar la sincronización.';
 }
 async function signInSyncAccount() {
-  if (!state.sync.auth) { toast('Configura Firebase primero.'); return; }
+  if (!state.sync.auth) { toast(isCloudConfigured() ? 'Firebase aún no está disponible. Reintentando…' : 'Configura Firebase primero.'); if(isCloudConfigured()) initCloudSync().catch(()=>{}); return; }
   let credentials;
   try { credentials = syncCredentials(); } catch (error) { toast(error.message); return; }
   setSyncStatus('busy', 'Entrando…');
@@ -974,7 +974,7 @@ async function signInSyncAccount() {
   }
 }
 async function createSyncAccount() {
-  if (!state.sync.auth) { toast('Configura Firebase primero.'); return; }
+  if (!state.sync.auth) { toast(isCloudConfigured() ? 'Firebase aún no está disponible. Reintentando…' : 'Configura Firebase primero.'); if(isCloudConfigured()) initCloudSync().catch(()=>{}); return; }
   let credentials;
   try { credentials = syncCredentials(); } catch (error) { toast(error.message); return; }
   setSyncStatus('busy', 'Creando cuenta…');
@@ -988,7 +988,7 @@ async function createSyncAccount() {
   }
 }
 async function resetSyncPassword() {
-  if (!state.sync.auth) { toast('Configura Firebase primero.'); return; }
+  if (!state.sync.auth) { toast(isCloudConfigured() ? 'Firebase aún no está disponible. Reintentando…' : 'Configura Firebase primero.'); if(isCloudConfigured()) initCloudSync().catch(()=>{}); return; }
   const email = (els.syncEmail?.value || '').trim().toLowerCase();
   if (!email || !email.includes('@')) { toast('Escribe primero tu email.'); return; }
   try {
@@ -1370,7 +1370,7 @@ function actionOption({icon,title,sub='',end='',attrs='',className=''}){return `
 function showActionSheet(html,{variant=''}={}){els.actionSheet.classList.remove('profile-day-dialog');if(variant)els.actionSheet.classList.add(variant);els.actionSheetContent.innerHTML=html;openSheet(els.actionSheet);}
 
 function openWhatsNew(){
-  showActionSheet(`${sheetHeader('Novedades','Organizador 6.0.5')}
+  showActionSheet(`${sheetHeader('Novedades','Organizador 6.0.6')}
     <div class="release-hero">
       <span class="release-badge">FOUNDATION & RELIABILITY</span>
       <strong>Una base más limpia para lo que viene.</strong>
@@ -2238,7 +2238,7 @@ window.addEventListener('focus',refreshWorkFocusFromClock);
 window.addEventListener('pageshow',refreshWorkFocusFromClock);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshWorkFocusFromClock();});
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=6.0.5',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=6.0.6',{updateViaCache:'none'}).then(reg=>{reg.update().catch(()=>{});reg.addEventListener('updatefound',()=>{const worker=reg.installing;if(!worker)return;worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Actualización preparada. Se aplicará al volver a abrir.',{duration:4200});});});}).catch(error=>{logClientError('service-worker',error);console.warn('Service worker:',error);}));}
 
 function initCompactSettings(){
   const sheet=document.querySelector('.settings-sheet');
@@ -2246,7 +2246,7 @@ function initCompactSettings(){
   if(!sheet||!form||form.dataset.settings605==='1')return;
   form.dataset.settings605='1';
 
-  // v6.0.5: Settings behaves like a native settings hierarchy: a quiet index
+  // v6.0.6: Settings behaves like a native settings hierarchy: a quiet index
   // first, then one focused detail page. Existing controls keep their IDs and
   // listeners; we only reorganize their DOM containers.
   const sections=[...form.querySelectorAll(':scope > .settings-section')];

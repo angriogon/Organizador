@@ -1502,7 +1502,7 @@ body.modal-open { position:fixed; width:100%; left:0; right:0; }
 @media(max-width:430px){.profile-day-dialog .profile-grid{grid-template-columns:1fr 1fr!important}.profile-day-dialog .profile-grid button{min-height:70px!important}}
 
 /* =========================================================
-   v6.0.5 · Settings proposal A — native, minimal hierarchy
+   v6.0.6 · Settings proposal A — native, minimal hierarchy
    ========================================================= */
 .settings-sheet{max-width:520px!important}
 .settings-sheet .settings-organized{padding:14px 16px 16px!important}

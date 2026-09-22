@@ -151,7 +151,7 @@ La modularización es deliberadamente progresiva: no se ha reescrito sincronizac
 - Protección reforzada frente a click-through al cerrar hojas en iOS.
 
 
-## 6.0.5 · Visual calm
+## 6.0.6 · Visual calm
 - Ajustes convertidos en índice compacto.
 - Cabecera PWA iOS opaca y nítida.
 - Calendario táctil reforzado.
@@ -159,14 +159,14 @@ La modularización es deliberadamente progresiva: no se ha reescrito sincronizac
 - Filas de tareas más densas en iOS y Windows.
 - Pulsar Inicio cuando ya está activo no fuerza un render visible.
 
-## 6.0.5 · iOS interaction polish
+## 6.0.6 · iOS interaction polish
 
 - Cabecera PWA iOS totalmente opaca y aislada de capas con blur/composición.
 - Cierre de overlays con cuarentena de puntero para impedir click-through sobre controles inferiores.
 - Captura rápida ajustada al contenido; el formulario solo crece al abrir Más opciones.
 - Ajustes rediseñado como índice silencioso con controles compactos y una única sección abierta.
 
-## 6.0.5 · Ajustes de mínima intervención
+## 6.0.6 · Ajustes de mínima intervención
 - Sustituye el acordeón de Ajustes por una portada tipo iOS con seis destinos: Tu día, Apariencia, Sincronización, Privacidad y seguridad, Datos y copias y Aplicación.
 - Cada destino abre una vista de detalle enfocada y conserva los controles, IDs y persistencia existentes.
 - La portada muestra resúmenes breves (capacidad/perfil, apariencia y estado de sincronización) sin exponer formularios completos.

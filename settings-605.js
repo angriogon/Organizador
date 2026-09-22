@@ -1,7 +1,7 @@
 const fs=require('fs');
 const app=fs.readFileSync('app.js','utf8'), css=fs.readFileSync('styles.css','utf8'), html=fs.readFileSync('index.html','utf8');
 const checks=[
- ['version',html.includes('6.0.5')],
+ ['version',html.includes('6.0.6')],
  ['native index',app.includes("className='settings-index'" )],
  ['six groups',['Tu día','Apariencia','Sincronización','Privacidad y seguridad','Datos y copias','Aplicación'].every(x=>app.includes(x))],
  ['detail navigation',app.includes('settings-detail')&&app.includes('settings-back')],
